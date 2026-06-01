@@ -1,0 +1,3 @@
+[submodule "figlet-fonts-xero/src/main/resources/fonts"]
+	path = figlet-fonts-xero/src/main/resources/fonts
+	url = https://github.com/xero/figlet-fonts

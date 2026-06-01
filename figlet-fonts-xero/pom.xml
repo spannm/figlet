@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.spannm</groupId>
+        <artifactId>figlet</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>figlet-fonts-xero</artifactId>
+    <packaging>jar</packaging>
+
+    <name>figlet fonts :: xero</name>
+    <description>Resource module containing fonts from the xero/figlet-fonts repository</description>
+
+    <build>
+        <resources>
+            <!-- Upstream submodule content, kept 1:1 with xero/figlet-fonts.
+                 The excluded *.tlf files are corrupted upstream (ZIP data instead of
+                 plain-text TOIlet fonts); corrected copies are supplied by the
+                 resources-patched resource below and override them here. -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>fonts/**/*.flf</include>
+                    <include>fonts/**/*.tlf</include>
+                </includes>
+                <excludes>
+                    <exclude>fonts/**/* *.flf</exclude>
+                    <exclude>fonts/**/* *.tlf</exclude>
+                    <exclude>fonts/ascii12.tlf</exclude>
+                    <exclude>fonts/ascii9.tlf</exclude>
+                    <exclude>fonts/bigascii12.tlf</exclude>
+                    <exclude>fonts/bigascii9.tlf</exclude>
+                    <exclude>fonts/bigmono12.tlf</exclude>
+                    <exclude>fonts/bigmono9.tlf</exclude>
+                    <exclude>fonts/mono12.tlf</exclude>
+                    <exclude>fonts/mono9.tlf</exclude>
+                    <exclude>fonts/smascii12.tlf</exclude>
+                    <exclude>fonts/smascii9.tlf</exclude>
+                    <exclude>fonts/smmono12.tlf</exclude>
+                    <exclude>fonts/smmono9.tlf</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources-patched</directory>
+                <includes>
+                    <include>fonts/**/*.tlf</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
+</project>

@@ -1,0 +1,97 @@
+name: Build & Deploy
+
+on:
+    push:
+        branches:
+        - master
+    pull_request:
+        branches:
+        - master
+    workflow_dispatch: {}
+
+# cancel superseded runs on the same branch/PR to save CI minutes.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+                java: ['17']
+                include:
+                -   os: ubuntu-latest
+                    java: '25'
+        runs-on: ${{ matrix.os }}
+        # JDK 25 is a forward-compatibility canary (see errorprone-fatal profile notes in pom.xml
+        # on Error Prone's JDK ceiling): let it fail without failing the workflow or blocking deploy.
+        continue-on-error: ${{ matrix.java == '25' }}
+        steps:
+        -   name: Check out repository (incl. font submodules)
+            uses: actions/checkout@v4
+            with:
+                submodules: recursive
+                fetch-depth: 1
+
+        -   name: Verify font submodules were checked out
+            shell: bash
+            run: |
+                set -euo pipefail
+                for module in figlet-fonts-xero; do
+                    dir="$module/src/main/resources/fonts"
+                    count=$(find "$dir" -type f \( -name '*.flf' -o -name '*.tlf' \) 2>/dev/null | wc -l)
+                    echo "Found $count font file(s) in $dir"
+                    if [ "$count" -eq 0 ]; then
+                        echo "::error::$module has no font files. Was the git submodule checked out (submodules: recursive)?"
+                        exit 1
+                    fi
+                done
+
+        -   name: Set up JDK ${{ matrix.java }}
+            uses: actions/setup-java@v4
+            with:
+                java-version: ${{ matrix.java }}
+                distribution: 'temurin'
+                cache: maven
+
+        -   name: Build with Maven/JDK ${{ matrix.java }} on ${{ matrix.os }}
+            run: mvn --batch-mode --file pom.xml clean verify
+
+    deploy:
+        needs: build
+        if: github.event_name == 'push'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+        -   name: Check out repository (incl. font submodules)
+            uses: actions/checkout@v4
+            with:
+                submodules: recursive
+                fetch-depth: 1
+
+        -   name: Set up Java for deployment to Sonatype snapshot repo
+            uses: actions/setup-java@v4
+            with:
+                java-version: '17'
+                distribution: 'temurin'
+                cache: maven
+                # Sonatype Central Snapshots
+                # must match distributionManagement/snapshotRepository/id in pom:
+                server-id: central
+                server-username: SONATYPE_CENTRAL_USERNAME
+                server-password: SONATYPE_CENTRAL_PASSWORD
+
+        -   name: Deploy to Sonatype Central snapshot repo
+            run: mvn --batch-mode --file pom.xml --activate-profiles fast deploy
+            env:
+                SONATYPE_CENTRAL_USERNAME:  ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
+                SONATYPE_CENTRAL_PASSWORD:  ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
+

@@ -1,0 +1,70 @@
+
+========================================================================
+  @project.artifactId@ (v@project.version@)
+  @project.description@
+  @project.url@
+========================================================================
+
+GOALS
+-----
+
+  figlet:render       (default phase: validate)
+
+    Renders the configured text as ASCII art. Property placeholders
+    like ${project.name} are resolved against the Maven model.
+    Parameters:
+      figlet.content  Content to render, may use the figlet4j markup DSL
+                      (<figletFont name="...">...</figletFont>, <lineBreak/>)
+                      to mix multiple fonts with plain text (default: ${project.name})
+      figlet.font     Built-in font name (default: standard)
+      figlet.fontFile Path to external .flf file
+      figlet.width    Output width     (default: 72)
+      figlet.strict   Fail on unknown chars (default: true)
+      figlet.target   Output target: info/debug/stdout/stderr (default: info)
+      figlet.skip     Skip this goal   (default: false)
+
+  figlet:list-fonts   (no default phase — run standalone)
+
+    Lists all available built-in FIGfonts alphabetically.
+    Parameters:
+      figlet.width    Sample rendering width, used only with figlet.sample (default: 72)
+      figlet.metadata Show author/date metadata for each font (default: false)
+      figlet.sample   Render a short sample for each font    (default: false)
+      figlet.sampleText  Sample text (default: current weekday name)
+      figlet.skip     Skip this goal   (default: false)
+
+  figlet:help         (no default phase — run standalone)
+
+    Shows this help text and credits.
+    Parameters:
+      figlet.skip     Skip this goal   (default: false)
+
+
+CREDITS & ACKNOWLEDGEMENTS
+--------------------------
+
+  FIGlet program (original C implementation)
+    Glenn Chappell, Ian Chai, Frank Sheeran — Spring 1991
+    https://www.figlet.org
+    License: New BSD License
+
+  FIGfont specification (figfont.txt)
+    John Cowan, Paul Burton — 1996/1997
+    Based on earlier work by Glenn Chappell and Ian Chai
+    https://www.jave.de/figlet/figfont.html
+
+  jfiglet (Java implementation - sadly unmaintained recently, inspiration for figlet4j)
+    Lajos Puskas (lalyos) — https://github.com/lalyos/jfiglet
+    Original Java port based on work by Benoît Rigaut (CERN)
+
+  TOIlet
+    Sam Hocevar — http://caca.zoy.org/wiki/toilet
+    License: WTFPL
+
+  xero/figlet-fonts (bundled font collection, figlet-fonts-xero module)
+    xero — https://github.com/xero/figlet-fonts
+
+  Bundled FIGfont files
+    Various authors — see individual .flf file comment blocks.
+    Only fonts with compatible open-source licenses are bundled.
+    The standard font collection is distributed under the New BSD License.

@@ -1,0 +1,54 @@
+import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+File buildLog = new File(basedir, "build.log");
+if (!buildLog.isFile()) {
+    throw new RuntimeException("build.log not found: " + buildLog);
+}
+
+StringBuilder content = new StringBuilder();
+boolean buildSucceeded = false;
+boolean inBannerBlock = false;
+int bannerLineCount = 0;
+
+// target=stdout in basic-it/pom.xml writes the banner as raw, unprefixed
+// output, unlike Maven's own log lines which always start with "[INFO]".
+// Counting the raw lines right after the "figlet:...:render" execution
+// marker (and before the next "[INFO] ---" marker) proves that a
+// multi-line banner was actually produced, without depending on the
+// exact font, glyph characters, or line count of any particular content.
+BufferedReader reader = new BufferedReader(new FileReader(buildLog));
+try {
+    String line;
+    while ((line = reader.readLine()) != null) {
+        content.append(line).append("\n");
+        if (line.contains("BUILD SUCCESS")) {
+            buildSucceeded = true;
+        }
+
+        if (line.contains(":render (render-banner) @ basic-it")) {
+            inBannerBlock = true;
+        } else if (inBannerBlock) {
+            if (line.startsWith("[INFO] ---")) {
+                inBannerBlock = false;
+            } else if (!line.trim().isEmpty()) {
+                bannerLineCount++;
+            }
+        }
+    }
+} finally {
+    reader.close();
+}
+
+if (!buildSucceeded) {
+    throw new RuntimeException("Expected 'BUILD SUCCESS' in build.log:\n" + content);
+}
+
+if (bannerLineCount < 2) {
+    throw new RuntimeException("Expected at least 2 raw output lines after the figlet:render "
+        + "execution in build.log (found " + bannerLineCount + ") - figlet:render may not have "
+        + "produced a multi-line banner:\n" + content);
+}
+
+return true;
