@@ -1,0 +1,11 @@
+spannm-figlet
+Copyright 2026 Markus Spann (spannm@outlook.de)
+
+This product includes software developed by Markus Spann
+(https://github.com/spannm).
+
+This product may bundle font resources dynamically collected
+from sources or repositories such as figlet.org.
+The individual copyright  and authorship notices for these fonts
+are preserved within the respective font files
+and the corresponding module's documentation.

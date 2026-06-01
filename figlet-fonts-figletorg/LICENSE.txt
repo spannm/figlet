@@ -1,0 +1,19 @@
+Dual-Licensing / Third-Party Font Notices
+==========================================
+
+The build tools and repository structure of this module are licensed under
+the Apache License, Version 2.0 (see parent project).
+
+The FIGfont files (.flf) contained within this artifact have been dynamically
+collected from public repositories (primarily figlet.org) using the
+automated, keyword-based filter in fetch-fonts.sh, which excludes any font
+whose embedded comment block contains recognisably restrictive license
+language (e.g. "shareware", "personal use only", "not for commercial use").
+
+This is a best-effort, automated screen, not a legal guarantee: fonts whose
+comment blocks omit license terms entirely, or phrase restrictions in a way
+the filter does not recognise, are not caught by it. Each font remains the
+property of its respective author, and the specific license and copyright
+information — where present — is embedded directly within the comment
+block of the individual '.flf' file; consult it before relying on a given
+font under a specific license.

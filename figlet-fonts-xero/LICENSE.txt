@@ -1,0 +1,18 @@
+Dual-Licensing / Third-Party Font Notices
+==========================================
+
+The build tools and repository structure of this module are licensed under
+the Apache License, Version 2.0 (see parent project).
+
+The FIGfont (.flf) and TOIlet font (.tlf) files contained within this artifact
+are integrated verbatim via a Git submodule pointing at the public repository
+at github.com/xero/figlet-fonts, with no additional filtering applied by this
+project — unlike figlet-fonts-figletorg, this module does not run an
+automated license-keyword screen of its own.
+
+Each font remains the property of its respective author, and the specific
+license and copyright information — where present — is embedded directly
+within the comment block of the individual font file; consult it before
+relying on a given font under a specific license. This project relies on
+the upstream repository's own curation and makes no independent guarantee
+about the licensing status of individual fonts.

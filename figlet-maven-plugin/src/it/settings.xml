@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 http://maven.apache.org/xsd/settings-1.2.0.xsd">
+
+    <interactiveMode>false</interactiveMode>
+
+    <!--
+      Integration tests run against an isolated local repository (see
+      figlet-maven-plugin/pom.xml, maven-invoker-plugin/localRepositoryPath) so
+      that the IT build only ever sees the plugin/library artifacts explicitly
+      installed by the "install" goal that runs before it.
+      This profile adds the developer's/CI's real local repository as an extra
+      (not exclusive) repository/pluginRepository, so ordinary build plugins
+      already resolved by the reactor build don't need to be re-downloaded.
+      Deliberately NOT a <mirror>: a mirror would replace every repository
+      (including Maven Central) outright, so any artifact missing from the
+      real local repository - e.g. a plugin an IT project starts using that
+      the outer reactor build doesn't otherwise need - would fail to resolve
+      with no network fallback. Plain repository entries are tried in
+      addition to the defaults, preserving that fallback.
+    -->
+    <profiles>
+        <profile>
+            <id>local-repository-cache</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>local-repository-cache</id>
+                    <url>file://${user.home}/.m2/repository</url>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>local-repository-cache</id>
+                    <url>file://${user.home}/.m2/repository</url>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+</settings>
