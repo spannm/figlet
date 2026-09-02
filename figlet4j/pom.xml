@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.github.spannm</groupId>
         <artifactId>figlet</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>figlet4j</artifactId>
