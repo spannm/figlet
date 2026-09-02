@@ -95,7 +95,7 @@
         <dep.plugin.maven-deploy.version>3.1.3</dep.plugin.maven-deploy.version>
         <dep.plugin.maven-enforcer.version>3.6.3</dep.plugin.maven-enforcer.version>
         <dep.plugin.maven-failsafe.version>3.5.6</dep.plugin.maven-failsafe.version>
-        <dep.plugin.maven-gpg.version>3.2.7</dep.plugin.maven-gpg.version>
+        <dep.plugin.maven-gpg.version>3.2.8</dep.plugin.maven-gpg.version>
         <dep.plugin.maven-invoker.version>3.10.1</dep.plugin.maven-invoker.version>
         <dep.plugin.maven-jar.version>3.5.0</dep.plugin.maven-jar.version>
         <dep.plugin.maven-javadoc.version>3.12.0</dep.plugin.maven-javadoc.version>
