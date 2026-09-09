@@ -36,6 +36,12 @@ import java.util.regex.Pattern;
  * wrapped in one {@code <figletFont>} tag referencing that font.
  *
  * <h2>Minimal configuration</h2>
+ * An {@code <execution>} is required to bind the goal into the build — a plugin
+ * merely listed in {@code <build><plugins>} without one is never invoked
+ * automatically. No {@code <phase>} is needed inside it, though: the goal
+ * defaults to the {@code validate} phase (see {@link LifecyclePhase#VALIDATE}).
+ * To avoid repeating the {@code <execution>} block in every module, declare it
+ * once in a shared parent POM instead.
  * <pre>{@code
  * <plugin>
  *   <groupId>io.github.spannm</groupId>
@@ -63,10 +69,16 @@ import java.util.regex.Pattern;
  * }</pre>
  *
  * <h2>Multi-module builds</h2>
- * This goal only executes for the execution-root project (the module Maven
- * was invoked on) and is a no-op for every other module in the reactor, even
- * if bound in a child module's own {@code pom.xml}. This prevents the same
- * banner from being printed once per module.
+ * By default, this goal only executes for the execution-root project (the
+ * module Maven was invoked on) and is a no-op for every other module in the
+ * reactor, even if bound in a child module's own {@code pom.xml}. This
+ * prevents the same banner from being printed once per module when the
+ * execution is inherited from a shared parent POM.
+ * <p>
+ * Some use cases do want a banner per module (e.g. a distinct name per
+ * artifact). Set {@code executionRootOnly} to {@code false} — typically
+ * overridden in a specific module's own {@code <configuration>}, not
+ * globally in the parent — to render there too.
  *
  * @since 1.0.0
  */
@@ -102,7 +114,8 @@ public class RenderMojo extends AbstractFontMojo {
      */
     @Parameter(property = "figlet.content",
         defaultValue = "<lineBreak/><figletFont name=\"standard\">${project.name}</figletFont><lineBreak/><preserveWhitespace>    v${project.version}</preserveWhitespace><lineBreak/>",
-        required = true, alias = "content")
+        required = true,
+        alias = "content")
     private String               parmContent;
 
     /**
@@ -112,15 +125,30 @@ public class RenderMojo extends AbstractFontMojo {
      * When {@code false}, unsupported characters are silently replaced by
      * {@code '?'}, and unresolved placeholders are left as-is (with a warning logged).
      */
-    @Parameter(property = "figlet.strict", defaultValue = "true", alias = "strict")
+    @Parameter(property = "figlet.strict",
+        defaultValue = "true",
+        alias = "strict")
     private boolean              parmStrict;
 
     /**
      * Where to output the ASCII art banner.<br>
      * Supported values are: {@code info}, {@code debug}, {@code stdout}, {@code stderr}.
      */
-    @Parameter(property = "figlet.target", defaultValue = "info", alias = "target")
+    @Parameter(property = "figlet.target",
+        defaultValue = "info",
+        alias = "target")
     private String               parmTarget;
+
+    /**
+     * When {@code true} (the default), this goal only runs for the
+     * execution-root project and is a no-op in every other reactor module —
+     * see the class Javadoc for why. Set to {@code false} in a module that
+     * should render its own banner regardless of reactor position.
+     */
+    @Parameter(property = "figlet.executionRootOnly",
+        defaultValue = "true",
+        alias = "executionRootOnly")
+    private boolean               parmExecutionRootOnly;
 
     /** The current Maven project, injected automatically. */
     @Parameter(defaultValue = "${project}", readonly = true, required = true, alias = "project")
@@ -132,8 +160,9 @@ public class RenderMojo extends AbstractFontMojo {
 
     @Override
     protected void executeImpl() throws MojoExecutionException, MojoFailureException {
-        if (!parmProject.isExecutionRoot()) {
-            getLog().debug("Skipping figlet rendering: project is not the execution root");
+        if (parmExecutionRootOnly && !parmProject.isExecutionRoot()) {
+            getLog().debug("Skipping figlet rendering: project is not the execution root "
+                + "(set executionRootOnly=false to render in this module too)");
             return;
         }
 

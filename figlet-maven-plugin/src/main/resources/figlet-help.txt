@@ -22,6 +22,9 @@ GOALS
       figlet.width    Output width     (default: 72)
       figlet.strict   Fail on unknown chars (default: true)
       figlet.target   Output target: info/debug/stdout/stderr (default: info)
+      figlet.executionRootOnly
+                      Only render for the execution-root project, skip in
+                      other reactor modules (default: true)
       figlet.skip     Skip this goal   (default: false)
 
   figlet:list-fonts   (no default phase — run standalone)

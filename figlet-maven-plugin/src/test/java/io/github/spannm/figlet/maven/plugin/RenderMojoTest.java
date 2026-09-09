@@ -40,6 +40,7 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
         setField(mojo, "parmWidth", 200);
         setField(mojo, "parmStrict", false);
         setField(mojo, "parmProject", createMinimalProject("test-artifact", "test-name", "0.8.15"));
+        setField(mojo, "parmExecutionRootOnly", true);
     }
 
     @Test
@@ -208,6 +209,18 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
 
         assertThat(log.infoMessages).isEmpty();
         assertThat(log.debugContains("Skipping figlet rendering")).isTrue();
+    }
+
+    @Test
+    void execute_notExecutionRoot_executionRootOnlyFalse_shouldRender() throws Exception {
+        MavenProject project = (MavenProject) getField(mojo, "parmProject");
+        project.setExecutionRoot(false);
+        setField(mojo, "parmExecutionRootOnly", false);
+        setField(mojo, "parmContent", "Hello");
+
+        mojo.execute();
+
+        assertThat(log.infoMessages).isNotEmpty();
     }
 
     @Test
