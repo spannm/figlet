@@ -113,7 +113,7 @@ public final class FigletMarkupParser {
     }
 
     /**
-     * Appends {@code text} as a literal {@link FigletMarkupNode.TextNode}, after
+     * Appends {@code text} as a literal {@link TextNode}, after
      * (a) checking it for tag-like fragments that were not recognised as valid
      * markup, and (b) trimming it on a per-line basis: leading/trailing
      * whitespace is removed from every line, and lines left blank after
