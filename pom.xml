@@ -49,12 +49,12 @@
 
     <distributionManagement>
         <snapshotRepository>
-            <id>central</id>
+            <id>sonatype-central</id>
             <name>Sonatype Central Snapshots</name>
             <url>${deploy.snapshot.url}</url>
         </snapshotRepository>
         <repository>
-            <id>central</id>
+            <id>sonatype-central</id>
             <name>Sonatype Central Staging Repository</name>
             <url>https://central.sonatype.com</url>
         </repository>
@@ -548,7 +548,7 @@
                              This lets the plugin take over the standard deploy goal and implement its own logic for deploying to the new Sonatype Central Portal. -->
                         <extensions>true</extensions>
                         <configuration>
-                            <publishingServerId>central</publishingServerId>
+                            <publishingServerId>sonatype-central</publishingServerId>
                             <autoPublish>false</autoPublish>
                         </configuration>
                     </plugin>
