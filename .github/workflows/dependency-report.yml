@@ -34,6 +34,6 @@ jobs:
                     echo "## Outdated dependencies & plugins"
                     echo
                     echo '```text'
-                    mvn --batch-mode --file pom.xml versions:display-dependency-updates versions:display-plugin-updates
+                    ./mvnw --batch-mode --file pom.xml versions:display-dependency-updates versions:display-plugin-updates
                     echo '```'
                 } >> "$GITHUB_STEP_SUMMARY"

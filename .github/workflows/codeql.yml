@@ -29,10 +29,10 @@ jobs:
             security-events: write
 
         steps:
-        -   name: Check out repository (incl. font submodules)
+        # the font submodules only hold resources, compiling for CodeQL does not need them
+        -   name: Check out repository
             uses: actions/checkout@v7
             with:
-                submodules: recursive
                 fetch-depth: 1
 
         -   name: Set up JDK 17
@@ -52,7 +52,7 @@ jobs:
         # produce compiled classes for CodeQL to analyze, not to enforce project lint rules.
         -   name: Build for CodeQL analysis
             run: >
-                mvn --batch-mode --file pom.xml
+                ./mvnw --batch-mode --file pom.xml
                 -Dcheckstyle.skip=true
                 -Dcheck.skip-errorprone=true
                 -Dmaven.test.skip=true
