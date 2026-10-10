@@ -294,7 +294,7 @@ public final class FigletRenderer {
         for (String token : tokens) {
             for (int codepoint : token.codePoints().toArray()) {
                 char[][] glyph = resolveGlyph(codepoint);
-                if (glyph == null) {
+                if (glyph.length == 0) {
                     continue;
                 }
 
@@ -518,11 +518,11 @@ public final class FigletRenderer {
      * points are mapped to the {@code '?'} glyph. In strict mode this method
      * should never be called with an unsupported code point because
      * {@link #validateCodepoints} has already checked them; if it is nonetheless
-     * called (e.g. from {@link #renderedWidth} before validation), {@code null}
-     * is returned.
+     * called (e.g. from {@link #renderedWidth} before validation), an empty
+     * glyph is returned, which the caller skips.
      *
      * @param cp Unicode code point
-     * @return glyph rows, or {@code null} if unsupported and strict mode is active
+     * @return glyph rows, or an empty glyph if unsupported and strict mode is active
      */
     private char[][] resolveGlyph(int cp) {
         if (font.supportsCodepoint(cp)) {
@@ -531,7 +531,7 @@ public final class FigletRenderer {
         if (!strict) {
             return font.getCharacter('?');
         }
-        return null; // strict mode: validated upstream, should not reach here
+        return new char[0][]; // strict mode: validated upstream, should not reach here
     }
 
     /**

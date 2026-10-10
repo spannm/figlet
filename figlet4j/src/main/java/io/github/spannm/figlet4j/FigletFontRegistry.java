@@ -139,43 +139,6 @@ public final class FigletFontRegistry {
         FONT_CACHE.remove(key);
     }
 
-    /**
-     * Scans the classpath for the {@code /fonts} directory and discovers all
-     * available {@code .flf} and {@code .tlf} font files.
-     *
-     * @return unmodifiable map of case-insensitive font names to case-sensitive resource paths
-     */
-    private static NavigableMap<String, String> discoverBuiltinFonts() {
-        NavigableMap<String, String> fonts = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        ClassLoader cl = FigletFontRegistry.class.getClassLoader();
-
-        try {
-            Enumeration<URL> resources = cl.getResources(FONTS_DIR);
-            while (resources.hasMoreElements()) {
-                URL url = resources.nextElement();
-                URI uri = url.toURI();
-
-                if ("jar".equals(uri.getScheme())) {
-                    // handle packaged JAR file
-                    try (OwnedFileSystem owned = openFileSystem(uri)) {
-                        Path targetPath = owned.get().getPath("/" + FONTS_DIR);
-                        scanPath(targetPath, fonts);
-                    }
-                } else if ("file".equals(uri.getScheme())) {
-                    // handle exploded directory (IDE / Build target)
-                    Path targetPath = Paths.get(uri);
-                    scanPath(targetPath, fonts);
-                }
-            }
-        } catch (Exception ex) {
-            LOGGER.log(Level.ERROR, "Failed to discover built-in fonts", ex);
-            throw new FigletException("Failed to discover built-in fonts", ex);
-        }
-
-        LOGGER.log(Level.DEBUG, "Discovered {0} built-in fonts", fonts.size());
-        return unmodifiableNavigableMap(fonts);
-    }
-
     static void scanPath(Path path, Map<String, String> fonts) throws IOException {
         if (!Files.exists(path)) {
             return;
@@ -265,6 +228,49 @@ public final class FigletFontRegistry {
      */
     static final class FontHolder {
         static final Map<String, String> INSTANCE = discoverBuiltinFonts();
+
+        private FontHolder() {
+            throw new UnsupportedOperationException(
+                "Utility class " + getClass().getSimpleName() + " cannot be instantiated");
+        }
+
+        /**
+         * Scans the classpath for the {@code /fonts} directory and discovers all
+         * available {@code .flf} and {@code .tlf} font files.
+         *
+         * @return unmodifiable map of case-insensitive font names to case-sensitive resource paths
+         */
+        private static NavigableMap<String, String> discoverBuiltinFonts() {
+            NavigableMap<String, String> fonts = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            ClassLoader cl = FigletFontRegistry.class.getClassLoader();
+
+            try {
+                Enumeration<URL> resources = cl.getResources(FONTS_DIR);
+                while (resources.hasMoreElements()) {
+                    URL url = resources.nextElement();
+                    URI uri = url.toURI();
+
+                    if ("jar".equals(uri.getScheme())) {
+                        // handle packaged JAR file
+                        try (OwnedFileSystem owned = openFileSystem(uri)) {
+                            Path targetPath = owned.get().getPath("/" + FONTS_DIR);
+                            scanPath(targetPath, fonts);
+                        }
+                    } else if ("file".equals(uri.getScheme())) {
+                        // handle exploded directory (IDE / Build target)
+                        Path targetPath = Paths.get(uri);
+                        scanPath(targetPath, fonts);
+                    }
+                }
+            } catch (Exception ex) {
+                LOGGER.log(Level.ERROR, "Failed to discover built-in fonts", ex);
+                throw new FigletException("Failed to discover built-in fonts", ex);
+            }
+
+            LOGGER.log(Level.DEBUG, "Discovered {0} built-in fonts", fonts.size());
+            return unmodifiableNavigableMap(fonts);
+        }
+
     }
 
 }

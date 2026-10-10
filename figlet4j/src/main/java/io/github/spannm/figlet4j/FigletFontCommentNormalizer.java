@@ -45,7 +45,7 @@ final class FigletFontCommentNormalizer {
 
     // checks if a line contains at least two digits
     private static final Pattern           HAS_DIGITS_PATTERN        = Pattern.compile(
-        "[0-9]{2,}");
+        "\\d{2,}");
 
     private static final DateTimeFormatter FLEXIBLE_DATE_FORMATTER   = new DateTimeFormatterBuilder()
         .appendOptional(DateTimeFormatter.ofPattern("d MMM yyyy"))   // 13 Feb 1994 / 8 June 1994

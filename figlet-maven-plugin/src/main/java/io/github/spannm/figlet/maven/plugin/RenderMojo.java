@@ -252,6 +252,8 @@ public class RenderMojo extends AbstractFontMojo {
         return sb.toString();
     }
 
+    // the STDOUT and STDERR targets write to the console on purpose, not to the Maven log
+    @SuppressWarnings("java:S106")
     void doOutput(String banner, OutputTarget target) {
         String[] lines = banner.split("\n", -1);
 
