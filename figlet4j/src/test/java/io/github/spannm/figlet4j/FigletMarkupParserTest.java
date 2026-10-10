@@ -222,7 +222,8 @@ final class FigletMarkupParserTest {
     @Test
     void parse_result_shouldBeImmutable() {
         List<FigletMarkupNode> nodes = FigletMarkupParser.parse("plain text");
-        assertThatThrownBy(() -> nodes.add(FigletMarkupNode.lineBreak()))
+        FigletMarkupNode lineBreak = FigletMarkupNode.lineBreak();
+        assertThatThrownBy(() -> nodes.add(lineBreak))
             .isInstanceOf(UnsupportedOperationException.class);
     }
 

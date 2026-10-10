@@ -138,7 +138,7 @@ final class FigletFontTest {
     @Test
     void toString_shouldReturnFormattedString() {
         String expected = "FigletFont[name='standard', hardblank='$', height=2, baseline=1, comment=2, characters=2]";
-        assertThat(defaultFont.toString()).isEqualTo(expected);
+        assertThat(defaultFont).hasToString(expected);
     }
 
 }

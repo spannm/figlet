@@ -64,25 +64,16 @@ final class FigletFontCommentNormalizerTest {
         assertThat(result).containsExactly("Actual comment content here");
     }
 
-    @Test
-    void normalizeComment_leadingFontFileNameLine_shouldBeSkipped() {
-        // line matching "<fontname>.flf" should be dropped as a leading-junk line
-        List<String> comment = List.of("standard.flf", "Real comment line follows");
-        List<String> result = FigletFontCommentNormalizer.normalizeComment("standard", comment);
-        assertThat(result).containsExactly("Real comment line follows");
-    }
-
-    @Test
-    void normalizeComment_leadingFontFileNameLine_caseInsensitive_shouldBeSkipped() {
-        List<String> comment = List.of("STANDARD.FLF", "Real comment line follows");
-        List<String> result = FigletFontCommentNormalizer.normalizeComment("standard", comment);
-        assertThat(result).containsExactly("Real comment line follows");
-    }
-
-    @Test
-    void normalizeComment_leadingTlfFileNameLine_shouldBeSkipped() {
-        List<String> comment = List.of("mono9.tlf", "Real comment line follows");
-        List<String> result = FigletFontCommentNormalizer.normalizeComment("mono9", comment);
+    // a line matching "<fontname>.flf" or "<fontname>.tlf" is dropped as a leading-junk line
+    @ParameterizedTest(name = "[{index}] {1} ({2})")
+    @CsvSource(delimiter = '|', value = {
+        "standard | standard.flf | flf file name",
+        "standard | STANDARD.FLF | case-insensitive",
+        "mono9    | mono9.tlf    | tlf file name",
+    })
+    void normalizeComment_leadingFontFileNameLine_isSkipped(String fontName, String fileNameLine, String reason) {
+        List<String> comment = List.of(fileNameLine, "Real comment line follows");
+        List<String> result = FigletFontCommentNormalizer.normalizeComment(fontName, comment);
         assertThat(result).containsExactly("Real comment line follows");
     }
 

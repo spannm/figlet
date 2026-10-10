@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -45,7 +46,8 @@ final class FigletFontRegistryTest {
 
     @Test
     void getBuiltinFonts_shouldReturnUnmodifiableMap() {
-        assertThatThrownBy(() -> FigletFontRegistry.getBuiltinFonts().put("x", "y"))
+        Map<String, String> fonts = FigletFontRegistry.getBuiltinFonts();
+        assertThatThrownBy(() -> fonts.put("x", "y"))
             .isInstanceOf(UnsupportedOperationException.class);
     }
 
@@ -63,10 +65,7 @@ final class FigletFontRegistryTest {
         assertThat(builtins)
             .as("Built-in font registry should have dynamically discovered fonts")
             .isNotEmpty()
-            .containsKey("standard");
-
-        assertThat(builtins.get("standard"))
-            .isEqualTo("fonts/standard.flf");
+            .containsEntry("standard", "fonts/standard.flf");
     }
 
     @Test
@@ -96,7 +95,8 @@ final class FigletFontRegistryTest {
 
     @Test
     void listAllFonts_shouldReturnUnmodifiableSet() {
-        assertThatThrownBy(() -> FigletFontRegistry.listAllFonts().add("x"))
+        Set<String> fonts = FigletFontRegistry.listAllFonts();
+        assertThatThrownBy(() -> fonts.add("x"))
             .isInstanceOf(UnsupportedOperationException.class);
     }
 

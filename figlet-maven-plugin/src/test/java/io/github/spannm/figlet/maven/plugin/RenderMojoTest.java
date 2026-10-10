@@ -48,12 +48,10 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
         setField(mojo, "parmContent", "Hi");
         mojo.execute();
 
-        assertThat(log.infoMessages)
-            .as("Expected ASCII art output in the log")
-            .isNotEmpty();
         // ASCII art for "Hi" must contain at least one non-blank line
         assertThat(log.infoMessages)
-            .as("Expected at least one non-blank rendered line")
+            .as("Expected ASCII art with at least one non-blank line in the log")
+            .isNotEmpty()
             .anyMatch(s -> !s.isBlank());
     }
 
@@ -91,9 +89,10 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
             "<figletFont name=\"standard\">${project.name}</figletFont><lineBreak/>caption text");
         mojo.execute();
 
-        assertThat(log.infoMessages).anyMatch(s -> !s.isBlank());
         // the literal caption must appear verbatim (unrendered) among the info lines
-        assertThat(log.infoMessages).anyMatch(s -> s.contains("caption text"));
+        assertThat(log.infoMessages)
+            .anyMatch(s -> !s.isBlank())
+            .anyMatch(s -> s.contains("caption text"));
     }
 
     @Test
@@ -332,12 +331,13 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
 
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;
-        ByteArrayOutputStream outContent = new java.io.ByteArrayOutputStream();
-        ByteArrayOutputStream errContent = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
 
-        try {
-            System.setOut(new java.io.PrintStream(outContent));
-            System.setErr(new java.io.PrintStream(errContent));
+        try (PrintStream out = new PrintStream(outContent, true, UTF_8);
+             PrintStream err = new PrintStream(errContent, true, UTF_8)) {
+            System.setOut(out);
+            System.setErr(err);
 
             mojo.doOutput("StdoutLine", RenderMojo.OutputTarget.STDOUT);
             mojo.doOutput("StderrLine", RenderMojo.OutputTarget.STDERR);

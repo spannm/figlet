@@ -165,36 +165,19 @@ final class FigletRendererTest {
         }
     }
 
-    @Test
-    void render_explicitNewline_shouldProduceTwoBands() {
-        String result = new FigletRenderer(testFont).render("A\nB");
+    // every input line, blank or not, becomes one band of height rows; a CSV value cannot hold a
+    // line break, so the input uses a literal backslash-n that the test turns into a real one
+    @ParameterizedTest(name = "[{index}] {2}")
+    @CsvSource(delimiter = '|', value = {
+        "A\\nB    | 2 | two text lines",
+        "\\n      | 2 | single newline, two blank lines",
+        "\\n\\n    | 3 | two newlines, three blank lines",
+        "A\\n\\nB  | 3 | blank line between two text lines",
+    })
+    void render_newlines_producesOneBandPerLine(String input, int bands, String reason) {
+        String result = new FigletRenderer(testFont).render(input.replace("\\n", "\n"));
         long newlines = result.chars().filter(c -> c == '\n').count();
-        // Two bands × height(2) = 4 newlines
-        assertThat(newlines).isEqualTo(2L * testFont.getHeight());
-    }
-
-    @Test
-    void render_singleNewline_shouldProduceTwoBlankBands() {
-        // "\n" → split gives ["", ""] → 2 empty input lines → 2 blank bands × height(2) = 4
-        String result = new FigletRenderer(testFont).render("\n");
-        long newlines = result.chars().filter(c -> c == '\n').count();
-        assertThat(newlines).isEqualTo(2L * testFont.getHeight());
-    }
-
-    @Test
-    void render_twoNewlines_shouldProduceThreeBlankBands() {
-        // "\n\n" → split gives ["", "", ""] → 3 empty input lines → 3 × height(2) = 6
-        String result = new FigletRenderer(testFont).render("\n\n");
-        long newlines = result.chars().filter(c -> c == '\n').count();
-        assertThat(newlines).isEqualTo(3L * testFont.getHeight());
-    }
-
-    @Test
-    void render_textWithMultipleNewlines_shouldRenderEachLineIndependently() {
-        String result = new FigletRenderer(testFont).render("A\n\nB");
-        // 'A' band + blank band + 'B' band = 3 × height rows
-        long newlines = result.chars().filter(c -> c == '\n').count();
-        assertThat(newlines).isEqualTo(3L * testFont.getHeight());
+        assertThat(newlines).isEqualTo((long) bands * testFont.getHeight());
     }
 
     @Test

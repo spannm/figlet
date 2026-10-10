@@ -258,40 +258,22 @@ final class FigletFontLoaderTest {
         assertThat(font.getComment()).contains("ä");
     }
 
-    @Test
-    void loadFromStream_taggedUnicodeDecimal_parsesCodepoint() {
+    // the tag line carries the code point, followed by an optional comment
+    @ParameterizedTest(name = "[{index}] {0} ({2})")
+    @CsvSource(delimiter = '|', value = {
+        "9786 SMILEY    | 9786 | decimal",
+        "0x263A SMILEY  | 9786 | hex",
+        "0142 OCTAL TAG | 98   | octal",
+    })
+    void loadFromStream_taggedCodepoint_parsesCodepoint(String tagLine, int codepoint, String notation) {
         StringBuilder sb = buildMinimalHeaderWithRequiredGlyphs(1);
-        sb.append("9786 SMILEY\n"); // decimal codepoint tag with trailing comment
+        sb.append(tagLine).append('\n');
         sb.append(" @@\n");
 
         InputStream is = new ByteArrayInputStream(sb.toString().getBytes(ISO_8859_1));
         FigletFont font = FigletFontLoader.loadFromStream("TaggedFont", is);
 
-        assertThat(font.supportsCodepoint(9786)).isTrue();
-    }
-
-    @Test
-    void loadFromStream_taggedUnicodeHex_parsesCodepoint() {
-        StringBuilder sb = buildMinimalHeaderWithRequiredGlyphs(1);
-        sb.append("0x263A SMILEY\n"); // hex codepoint tag
-        sb.append(" @@\n");
-
-        InputStream is = new ByteArrayInputStream(sb.toString().getBytes(ISO_8859_1));
-        FigletFont font = FigletFontLoader.loadFromStream("TaggedFontHex", is);
-
-        assertThat(font.supportsCodepoint(0x263A)).isTrue();
-    }
-
-    @Test
-    void loadFromStream_taggedUnicodeOctal_parsesCodepoint() {
-        StringBuilder sb = buildMinimalHeaderWithRequiredGlyphs(1);
-        sb.append("0142 OCTAL TAG\n"); // octal codepoint tag -> decimal 98
-        sb.append(" @@\n");
-
-        InputStream is = new ByteArrayInputStream(sb.toString().getBytes(ISO_8859_1));
-        FigletFont font = FigletFontLoader.loadFromStream("TaggedFontOctal", is);
-
-        assertThat(font.supportsCodepoint(98)).isTrue();
+        assertThat(font.supportsCodepoint(codepoint)).isTrue();
     }
 
     @Test

@@ -44,8 +44,9 @@ final class FigletMarkupRendererTest {
     void render_fontNodeOnly_shouldProduceAsciiArtEndingInNewline() {
         String result = renderer.render("<figletFont name=\"roman\">A</figletFont>");
 
-        assertThat(result).isEqualTo(new FigletRenderer(ROMAN_FONT).render("A"));
-        assertThat(result).endsWith("\n");
+        assertThat(result)
+            .isEqualTo(new FigletRenderer(ROMAN_FONT).render("A"))
+            .endsWith("\n");
     }
 
     @Test

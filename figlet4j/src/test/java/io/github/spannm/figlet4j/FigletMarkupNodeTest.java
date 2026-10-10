@@ -48,11 +48,12 @@ final class FigletMarkupNodeTest {
         FigletMarkupNode c = FigletMarkupNode.text("other");
 
         assertThat(a.equals(a)).as("reflexive").isTrue();
-        assertThat(a).isEqualTo(b);
-        assertThat(a).isNotEqualTo(c);
-        assertThat(a).isNotEqualTo(null);
-        assertThat(a).isNotEqualTo("hello");
-        assertThat(a).isNotEqualTo(FigletMarkupNode.font("f", "hello"));
+        assertThat(a)
+            .isEqualTo(b)
+            .isNotEqualTo(c)
+            .isNotEqualTo(null)
+            .isNotEqualTo("hello")
+            .isNotEqualTo(FigletMarkupNode.font("f", "hello"));
     }
 
     @Test
@@ -60,15 +61,16 @@ final class FigletMarkupNodeTest {
         FigletMarkupNode a = FigletMarkupNode.text("hello");
         FigletMarkupNode b = FigletMarkupNode.text("hello");
 
-        assertThat(a.hashCode()).isEqualTo(b.hashCode());
-        assertThat(a.hashCode()).isEqualTo("hello".hashCode());
+        assertThat(a)
+            .hasSameHashCodeAs(b)
+            .hasSameHashCodeAs("hello");
     }
 
     @Test
     void textNode_toString_shouldContainClassNameAndText() {
         FigletMarkupNode node = FigletMarkupNode.text("hello");
 
-        assertThat(node.toString()).isEqualTo("TextNode[hello]");
+        assertThat(node).hasToString("TextNode[hello]");
     }
 
     @Test
@@ -116,12 +118,13 @@ final class FigletMarkupNodeTest {
         FigletMarkupNode differentFont = FigletMarkupNode.font("small", "hello");
 
         assertThat(a.equals(a)).as("reflexive").isTrue();
-        assertThat(a).isEqualTo(b);
-        assertThat(a).isNotEqualTo(differentText);
-        assertThat(a).isNotEqualTo(differentFont);
-        assertThat(a).isNotEqualTo(null);
-        assertThat(a).isNotEqualTo("roman");
-        assertThat(a).isNotEqualTo(FigletMarkupNode.text("hello"));
+        assertThat(a)
+            .isEqualTo(b)
+            .isNotEqualTo(differentText)
+            .isNotEqualTo(differentFont)
+            .isNotEqualTo(null)
+            .isNotEqualTo("roman")
+            .isNotEqualTo(FigletMarkupNode.text("hello"));
     }
 
     @Test
@@ -129,14 +132,14 @@ final class FigletMarkupNodeTest {
         FigletMarkupNode a = FigletMarkupNode.font("roman", "hello");
         FigletMarkupNode b = FigletMarkupNode.font("roman", "hello");
 
-        assertThat(a.hashCode()).isEqualTo(b.hashCode());
+        assertThat(a).hasSameHashCodeAs(b);
     }
 
     @Test
     void fontNode_toString_shouldContainClassNameFontNameAndText() {
         FigletMarkupNode node = FigletMarkupNode.font("roman", "hello");
 
-        assertThat(node.toString()).isEqualTo("FontNode[roman: hello]");
+        assertThat(node).hasToString("FontNode[roman: hello]");
     }
 
     @Test
@@ -165,7 +168,7 @@ final class FigletMarkupNodeTest {
 
     @Test
     void lineBreakNode_toString_shouldContainClassName() {
-        assertThat(FigletMarkupNode.lineBreak().toString()).isEqualTo("LineBreakNode[]");
+        assertThat(FigletMarkupNode.lineBreak()).hasToString("LineBreakNode[]");
     }
 
 }
