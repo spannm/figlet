@@ -38,8 +38,8 @@ import java.util.stream.Stream;
  * <h2>Thread safety</h2>
  * Built-in font discovery uses the <em>initialization-on-demand holder</em>
  * idiom and is therefore fully thread-safe without explicit synchronization.
- * Runtime registration via {@link #registerExternal} is <em>not</em>
- * synchronized; it must be called during single-threaded application startup.
+ * Registered external fonts and parsed fonts are kept in concurrent maps, so
+ * {@link #registerExternal} and {@link #loadFont} may be called concurrently.
  *
  * @author Markus Spann
  * @since 1.0.0
@@ -119,12 +119,13 @@ public final class FigletFontRegistry {
 
     /**
      * Registers an external {@code .flf} or {@code .tlf} font file.
-     * Normalizes the name to lowercase. This method is not thread-safe.
+     * Normalizes the name to lowercase.
      * <p>
      * Re-registering a name that was already loaded (and therefore cached)
      * invalidates that cache entry, so the next {@link #loadFont(String)} call
      * for this name re-parses the newly registered file instead of returning
-     * the previously cached font.
+     * the previously cached font. A concurrent {@link #loadFont(String)} still
+     * parsing the previous file completes first, its result is then discarded.
      *
      * @param fontName logical font name without extension
      * @param path file-system path to the font file; must not be {@code null}
