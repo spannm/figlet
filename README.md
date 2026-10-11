@@ -59,12 +59,21 @@ Add to your `pom.xml`:
   <groupId>io.github.spannm</groupId>
   <artifactId>figlet-maven-plugin</artifactId>
   <version>1.0.0</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>render</goal>
+      </goals>
+    </execution>
+  </executions>
   <configuration>
     <content>${project.name} ${project.version}</content>
     <font>chunky</font>
   </configuration>
 </plugin>
 ```
+
+The `<execution>` is required, otherwise the goal is never invoked. It binds to the `validate` phase by default, so no `<phase>` is needed. In a multi-module build, declare it once in the parent POM.
 
 ### As a Java library (`figlet4j`)
 
@@ -108,21 +117,22 @@ Or mix multiple fonts and plain text during a Maven build with the [markup DSL](
 | `figlet:list-fonts` | _(none)_      | Lists all available fonts with metadata |
 | `figlet:help`       | _(none)_      | Shows usage and credits                 |
 
-> **Note:** In a multi-module reactor build, `figlet:render` only executes for the
-> execution-root project (the module Maven was invoked on) and silently does
-> nothing for every other module — even if the plugin is bound in a child
-> module's own `pom.xml`. This avoids printing the same banner once per module.
+> **Note:** In a multi-module reactor build, `figlet:render` by default only executes
+> for the execution-root project (the module Maven was invoked on) and does nothing
+> for every other module, so the same banner is not printed once per module. Set
+> `executionRootOnly` to `false` in a module that should render its own banner.
 
 ### `render` configuration
 
 | Parameter  | Property          | Default           | Description                                                      |
 |------------|-------------------|-------------------|--------------------------------------------------------------------|
-| `content`  | `figlet.content`  | `${project.name}` | Content to render; supports `${...}` property placeholders and the [markup DSL](#markup-dsl) to mix multiple fonts with plain text |
+| `content`  | `figlet.content`  | _(project name as banner, version below)_ | Content to render; supports `${...}` property placeholders and the [markup DSL](#markup-dsl) to mix multiple fonts with plain text |
 | `font`     | `figlet.font`     | `standard`        | Name of a built-in font (see `figlet:list-fonts`)                |
 | `fontFile` | `figlet.fontFile` | _(none)_          | Path to an external `.flf` or `.tlf` file; takes precedence over `font` when both are set |
 | `width`    | `figlet.width`    | `72`              | Max output width; long lines wrap at word boundaries             |
 | `strict`   | `figlet.strict`   | `true`            | Fail if the content contains characters not supported by the font, or a `${...}` placeholder cannot be resolved |
 | `target`   | `figlet.target`   | `info`            | Where to write the banner: `info`, `debug`, `stdout`, or `stderr` |
+| `executionRootOnly` | `figlet.executionRootOnly` | `true` | Only render for the execution-root project of a multi-module build |
 | `skip`     | `figlet.skip`     | `false`           | Skip this goal entirely                                          |
 
 ### `list-fonts` configuration
