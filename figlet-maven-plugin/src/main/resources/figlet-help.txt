@@ -15,7 +15,8 @@ GOALS
     Parameters:
       figlet.content  Content to render, may use the figlet4j markup DSL
                       (<figletFont name="...">...</figletFont>, <lineBreak/>)
-                      to mix multiple fonts with plain text
+                      to mix multiple fonts with plain text; a <figletFont>
+                      tag without a name uses figlet.font/figlet.fontFile
                       (default: project name as ASCII art, version as plain text below)
       figlet.font     Built-in font name (default: standard)
       figlet.fontFile Path to external .flf file

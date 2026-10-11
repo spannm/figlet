@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -206,8 +208,20 @@ final class FigletMarkupParserTest {
     }
 
     @Test
-    void parse_fontTagMissingNameAttribute_shouldThrowFigletException() {
-        assertThatThrownBy(() -> FigletMarkupParser.parse("<figletFont>Hello</figletFont>"))
+    void parse_fontTagWithoutName_returnsFontNodeWithoutFontName() {
+        List<FigletMarkupNode> nodes = FigletMarkupParser.parse("<figletFont >Hello</figletFont>");
+
+        assertThat(nodes).containsExactly(FigletMarkupNode.font("Hello"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "<figletFont name=roman>Hello</figletFont>",
+        "<figletFont name>Hello</figletFont>",
+        "<figletFont font=\"roman\">Hello</figletFont>"
+    })
+    void parse_fontTagMalformedNameAttribute_throwsFigletException(String markup) {
+        assertThatThrownBy(() -> FigletMarkupParser.parse(markup))
             .isInstanceOf(FigletException.class)
             .hasMessageContaining("figletFont");
     }

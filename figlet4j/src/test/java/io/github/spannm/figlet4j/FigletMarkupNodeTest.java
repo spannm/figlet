@@ -111,6 +111,27 @@ final class FigletMarkupNodeTest {
     }
 
     @Test
+    void font_withoutFontName_returnsFontNodeWithNullFontName() {
+        FigletMarkupNode node = FigletMarkupNode.font("hello");
+
+        assertThat(node.isFont()).isTrue();
+        assertThat(node.fontName()).isNull();
+        assertThat(node.text()).isEqualTo("hello");
+        assertThat(node.withText("world").fontName()).isNull();
+    }
+
+    @Test
+    void fontNode_withoutFontName_equalsOnlyNodeWithoutFontName() {
+        FigletMarkupNode a = FigletMarkupNode.font("hello");
+
+        assertThat(a)
+            .isEqualTo(FigletMarkupNode.font("hello"))
+            .hasSameHashCodeAs(FigletMarkupNode.font("hello"))
+            .isNotEqualTo(FigletMarkupNode.font("roman", "hello"));
+        assertThat(FigletMarkupNode.font("roman", "hello")).isNotEqualTo(a);
+    }
+
+    @Test
     void fontNode_equals_shouldFollowValueSemantics() {
         FigletMarkupNode a = FigletMarkupNode.font("roman", "hello");
         FigletMarkupNode b = FigletMarkupNode.font("roman", "hello");

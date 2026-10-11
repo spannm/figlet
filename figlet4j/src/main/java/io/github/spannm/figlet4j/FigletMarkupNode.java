@@ -1,5 +1,7 @@
 package io.github.spannm.figlet4j;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * One node of a parsed {@link FigletMarkupParser markup} document.
  * <p>
@@ -46,7 +48,20 @@ public interface FigletMarkupNode {
      * @throws NullPointerException if {@code fontName} or {@code text} is {@code null}
      */
     static FigletMarkupNode font(String fontName, String text) {
-        return new FontNode(fontName, text);
+        return new FontNode(requireNonNull(fontName, "fontName"), text);
+    }
+
+    /**
+     * Creates a font (ASCII-art) node without a font name, to be rendered with
+     * the renderer's default font (see {@link FigletMarkupRenderer#withDefaultFont(FigletFont)}).
+     *
+     * @param text the text to render as ASCII art; must not be {@code null}
+     * @return a new {@link Type#FONT} node whose {@link #fontName()} is {@code null}
+     * @throws NullPointerException if {@code text} is {@code null}
+     * @since 1.0.1
+     */
+    static FigletMarkupNode font(String text) {
+        return new FontNode(null, text);
     }
 
     /**
@@ -99,7 +114,8 @@ public interface FigletMarkupNode {
     /**
      * Returns the referenced font name.
      *
-     * @return the font name for {@link Type#FONT} nodes; {@code null} otherwise
+     * @return the font name for {@link Type#FONT} nodes; {@code null} for other
+     *         node types and for font nodes that use the renderer's default font
      */
     default String fontName() {
         return null;

@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import io.github.spannm.figlet4j.FigletFontRegistry;
+import io.github.spannm.figlet4j.FigletRenderer;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
@@ -81,6 +83,16 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
         mojo.execute();
 
         assertThat(log.debugContains("single-font mode")).isTrue();
+    }
+
+    @Test
+    void execute_figletFontTagWithoutName_usesConfiguredFont() throws Exception {
+        setField(mojo, "parmFont", "small");
+        setField(mojo, "parmContent", "<figletFont>Hi</figletFont><lineBreak/>caption");
+        mojo.execute();
+
+        String expected = new FigletRenderer(FigletFontRegistry.loadFont("small")).withWidth(200).render("Hi");
+        assertThat(String.join("\n", log.infoMessages)).startsWith(expected).endsWith("caption");
     }
 
     @Test

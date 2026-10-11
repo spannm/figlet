@@ -13,7 +13,10 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>{@code <figletFont name="...">...</figletFont>} — the enclosed text is
  *       rendered as ASCII art using the named font. The tag body is taken
- *       verbatim; it is <em>not</em> itself scanned for nested tags.</li>
+ *       verbatim; it is <em>not</em> itself scanned for nested tags. The
+ *       {@code name} attribute may be omitted ({@code <figletFont>...</figletFont>}),
+ *       in which case the renderer's default font is used, see
+ *       {@link FigletMarkupRenderer#withDefaultFont(FigletFont)}.</li>
  *   <li>{@code <lineBreak/>} — an explicit line break, independent of any font
  *       or automatic word-wrapping.</li>
  *   <li>{@code <preserveWhitespace>...</preserveWhitespace>} — the enclosed text
@@ -43,7 +46,7 @@ import java.util.stream.Collectors;
 public final class FigletMarkupParser {
 
     private static final Pattern TOKEN_PATTERN = Pattern.compile(
-        "<figletFont\\s+name=\"([^\"]*)\"\\s*>(.*?)</figletFont>"
+        "<figletFont(?:\\s+name=\"([^\"]*)\")?\\s*>(.*?)</figletFont>"
         + "|<lineBreak\\s*/>"
         + "|<preserveWhitespace\\s*>(.*?)</preserveWhitespace>",
         Pattern.DOTALL);
@@ -51,7 +54,7 @@ public final class FigletMarkupParser {
     /**
      * Matches any leftover fragment that looks like an attempt at one of the
      * three known tags but wasn't recognised by {@link #TOKEN_PATTERN} — e.g. an
-     * unclosed {@code <figletFont>}, a missing/malformed {@code name}
+     * unclosed {@code <figletFont>}, a malformed {@code name}
      * attribute, a non-self-closing {@code <lineBreak>}, or an unclosed
      * {@code <preserveWhitespace>}. Used to turn likely typos into a clear
      * error instead of silently emitting them as literal text.
@@ -90,10 +93,11 @@ public final class FigletMarkupParser {
                 addTrimmedText(nodes, markup.substring(lastEnd, matcher.start()));
             }
 
-            String fontName = matcher.group(1);
+            String fontText = matcher.group(2);
             String preserved = matcher.group(3);
-            if (fontName != null) {
-                nodes.add(FigletMarkupNode.font(fontName, matcher.group(2)));
+            if (fontText != null) {
+                String fontName = matcher.group(1);
+                nodes.add(fontName == null ? FigletMarkupNode.font(fontText) : FigletMarkupNode.font(fontName, fontText));
             } else if (preserved != null) {
                 if (!preserved.isEmpty()) {
                     nodes.add(FigletMarkupNode.text(preserved));
@@ -147,7 +151,7 @@ public final class FigletMarkupParser {
     /**
      * Checks {@code text} for tag-like fragments that were not recognised as
      * valid markup — a strong signal of a typo (e.g. missing closing tag,
-     * unquoted or missing {@code name} attribute) rather than intentional
+     * unquoted {@code name} attribute) rather than intentional
      * literal text.
      *
      * @throws FigletException if {@code text} contains a suspicious fragment
@@ -157,9 +161,9 @@ public final class FigletMarkupParser {
         if (suspicious.find()) {
             throw new FigletException(String.format(
                 "Malformed figlet markup: found '%s' that is not part of a valid "
-                + "<figletFont name=\"...\">...</figletFont>, <lineBreak/>, or "
+                + "<figletFont [name=\"...\"]>...</figletFont>, <lineBreak/>, or "
                 + "<preserveWhitespace>...</preserveWhitespace> tag. "
-                + "Check for a missing closing tag or a missing/unquoted 'name' attribute. "
+                + "Check for a missing closing tag or an unquoted 'name' attribute. "
                 + "Fragment: \"%s\"",
                 suspicious.group(), excerpt(text, suspicious.start())));
         }

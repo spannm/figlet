@@ -50,6 +50,22 @@ final class FigletMarkupRendererTest {
     }
 
     @Test
+    void render_fontNodeWithoutName_usesDefaultFont() {
+        String result = new FigletMarkupRenderer(FONTS::get)
+            .withDefaultFont(SMALL_FONT)
+            .render("<figletFont>A</figletFont>");
+
+        assertThat(result).isEqualTo(new FigletRenderer(SMALL_FONT).render("A"));
+    }
+
+    @Test
+    void render_fontNodeWithoutNameNoDefaultFont_throwsFigletException() {
+        assertThatThrownBy(() -> renderer.render("<figletFont>A</figletFont>"))
+            .isInstanceOf(FigletException.class)
+            .hasMessageContaining("no default font");
+    }
+
+    @Test
     void render_textNodeOnly_shouldBeAppendedVerbatim() {
         String result = renderer.render("just plain text");
 
@@ -171,6 +187,12 @@ final class FigletMarkupRendererTest {
         FigletMarkupRenderer configured = new FigletMarkupRenderer(FONTS::get).withWidth(42);
 
         assertThat(configured.getWidth()).isEqualTo(42);
+    }
+
+    @Test
+    void getDefaultFont_reflectsConfiguredValue() {
+        assertThat(renderer.getDefaultFont()).isNull();
+        assertThat(new FigletMarkupRenderer(FONTS::get).withDefaultFont(ROMAN_FONT).getDefaultFont()).isSameAs(ROMAN_FONT);
     }
 
     @Test

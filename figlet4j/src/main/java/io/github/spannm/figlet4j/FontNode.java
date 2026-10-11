@@ -5,7 +5,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Objects;
 
 /**
- * Text to be rendered as ASCII art with a named font.
+ * Text to be rendered as ASCII art with a named font, or with the renderer's
+ * default font if no name is given.
  *
  * @since 1.0.1
  */
@@ -15,7 +16,7 @@ final class FontNode implements FigletMarkupNode {
     private final String text;
 
     FontNode(String fontName, String text) {
-        this.fontName = requireNonNull(fontName, "fontName");
+        this.fontName = fontName;
         this.text = requireNonNull(text, "text");
     }
 
@@ -47,7 +48,7 @@ final class FontNode implements FigletMarkupNode {
             return false;
         }
         FontNode other = (FontNode) obj;
-        return fontName.equals(other.fontName) && text.equals(other.text);
+        return Objects.equals(fontName, other.fontName) && text.equals(other.text);
     }
 
     @Override

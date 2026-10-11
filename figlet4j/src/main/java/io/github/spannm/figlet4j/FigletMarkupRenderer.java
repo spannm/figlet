@@ -28,7 +28,8 @@ import java.util.function.Function;
  * <h2>Node-by-node semantics</h2>
  * <ul>
  *   <li>{@code FONT} nodes are rendered via an internal {@link FigletRenderer}
- *       for the resolved font, using this renderer's {@link #getWidth() width}
+ *       for the resolved font (or the {@link #withDefaultFont(FigletFont) default font}
+ *       if the node has no font name), using this renderer's {@link #getWidth() width}
  *       and {@link #isStrict() strict} settings. Rendered banners always end in
  *       a trailing {@code \n} (see {@link FigletRenderer#render(String)}), so
  *       content that follows automatically starts on a fresh line even without
@@ -45,8 +46,9 @@ import java.util.function.Function;
 public final class FigletMarkupRenderer {
 
     private final Function<String, FigletFont> fontResolver;
-    private int     width  = FigletRenderer.DEFAULT_WIDTH;
-    private boolean strict = true;
+    private FigletFont                         defaultFont;
+    private int                                width        = FigletRenderer.DEFAULT_WIDTH;
+    private boolean                            strict       = true;
 
     /**
      * Constructs a markup renderer.
@@ -58,6 +60,30 @@ public final class FigletMarkupRenderer {
      */
     public FigletMarkupRenderer(Function<String, FigletFont> fontResolver) {
         this.fontResolver = requireNonNull(fontResolver, "fontResolver");
+    }
+
+    /**
+     * Returns the font used for {@code FONT} nodes without a font name.
+     *
+     * @return the default font, or {@code null} if none was set
+     * @since 1.0.1
+     */
+    public FigletFont getDefaultFont() {
+        return defaultFont;
+    }
+
+    /**
+     * Sets the font used for {@code FONT} nodes without a font name, i.e.
+     * {@code <figletFont>...</figletFont>} without a {@code name} attribute.
+     * Such nodes cannot be rendered unless a default font is set.
+     *
+     * @param defaultFont the default font; may be {@code null} to unset it
+     * @return this renderer for fluent chaining
+     * @since 1.0.1
+     */
+    public FigletMarkupRenderer withDefaultFont(FigletFont defaultFont) {
+        this.defaultFont = defaultFont;
+        return this;
     }
 
     /** Returns the maximum output width in characters, applied to every {@code FONT} node. */
@@ -140,8 +166,24 @@ public final class FigletMarkupRenderer {
         return out.toString();
     }
 
+    /**
+     * Renders a single {@code FONT} node with its named font, or with the
+     * default font if the node has no font name.
+     *
+     * @param node the font node to render
+     * @return the rendered banner
+     * @throws FigletException if the font cannot be resolved
+     */
     private String renderFontNode(FigletMarkupNode node) {
         String fontName = node.fontName();
+        if (fontName == null) {
+            if (defaultFont == null) {
+                throw new FigletException(
+                    "Figlet markup contains a <figletFont> tag without a 'name' attribute, but no default font is set.");
+            }
+            return renderWith(defaultFont, node.text());
+        }
+
         FigletFont font;
         try {
             font = fontResolver.apply(fontName);
@@ -153,8 +195,18 @@ public final class FigletMarkupRenderer {
             throw new FigletException("Unknown font '" + fontName + "' referenced in figlet markup.");
         }
 
-        FigletRenderer renderer = new FigletRenderer(font).withWidth(width).setStrict(strict);
-        return renderer.render(node.text());
+        return renderWith(font, node.text());
+    }
+
+    /**
+     * Renders {@code text} with {@code font} using this renderer's width and strict settings.
+     *
+     * @param font the font to render with
+     * @param text the text to render
+     * @return the rendered banner
+     */
+    private String renderWith(FigletFont font, String text) {
+        return new FigletRenderer(font).withWidth(width).setStrict(strict).render(text);
     }
 
 }

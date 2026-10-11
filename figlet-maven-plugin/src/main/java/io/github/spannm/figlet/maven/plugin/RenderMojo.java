@@ -30,7 +30,8 @@ import java.util.regex.Pattern;
  * figlet4j markup DSL to combine multiple fonts with literal, unrendered text
  * in a single banner — see {@link io.github.spannm.figlet4j.FigletMarkupParser}
  * for the exact grammar ({@code <figletFont name="...">...</figletFont>} and
- * {@code <lineBreak/>}). If {@code content} contains no {@code <figletFont>}
+ * {@code <lineBreak/>}). A {@code <figletFont>} tag without a {@code name}
+ * attribute uses {@code font}/{@code fontFile}. If {@code content} contains no {@code <figletFont>}
  * tag at all, the entire (property-resolved) content is rendered as a single
  * banner using {@code font}/{@code fontFile} — exactly as if it had been
  * wrapped in one {@code <figletFont>} tag referencing that font.
@@ -109,11 +110,11 @@ public class RenderMojo extends AbstractFontMojo {
      * is rendered as one banner using {@code font}/{@code fontFile}.
      * <p>
      * Without any explicit {@code content}, the project name is rendered as an
-     * ASCII art banner in the {@code standard} font, followed by the version
-     * as plain (non-figlet) text on the line below.
+     * ASCII art banner in the configured {@code font}/{@code fontFile}, followed
+     * by the version as plain (non-figlet) text on the line below.
      */
     @Parameter(property = "figlet.content",
-        defaultValue = "<lineBreak/><figletFont name=\"standard\">${project.name}</figletFont><lineBreak/><preserveWhitespace>    v${project.version}</preserveWhitespace><lineBreak/>",
+        defaultValue = "<lineBreak/><figletFont>${project.name}</figletFont><lineBreak/><preserveWhitespace>    v${project.version}</preserveWhitespace><lineBreak/>",
         required = true,
         alias = "content")
     private String               parmContent;
@@ -193,10 +194,13 @@ public class RenderMojo extends AbstractFontMojo {
         try {
             if (hasFontTag) {
                 // at least one <figletFont> tag is present -> resolve each referenced
-                // font by name from the built-in registry
+                // font by name from the built-in registry, tags without a name use font/fontFile
                 FigletMarkupRenderer markupRenderer = new FigletMarkupRenderer(FigletFontRegistry::loadFont)
                     .withWidth(getWidth())
                     .setStrict(parmStrict);
+                if (resolvedNodes.stream().anyMatch(n -> n.isFont() && n.fontName() == null)) {
+                    markupRenderer.withDefaultFont(resolveFont());
+                }
                 renderedText = markupRenderer.render(resolvedNodes);
             } else {
                 // no markup tags at all -> treat the whole content as one banner,

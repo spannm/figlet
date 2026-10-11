@@ -146,7 +146,7 @@ Or mix multiple fonts and plain text during a Maven build with the [markup DSL](
 ]]></content>
 ```
 
-- `<figletFont name="...">...</figletFont>` — enclosed text is rendered as ASCII art using the named built-in font.
+- `<figletFont name="...">...</figletFont>` — enclosed text is rendered as ASCII art using the named built-in font. Without the `name` attribute, `<figletFont>...</figletFont>` uses the font configured via `font`/`fontFile`.
 - `<lineBreak/>` — an explicit line break, independent of font or automatic word-wrapping.
 - `<preserveWhitespace>...</preserveWhitespace>` — enclosed text is emitted verbatim (leading/trailing whitespace and blank lines kept), unlike plain text which is trimmed.
 - Everything else is literal text, printed as-is.
