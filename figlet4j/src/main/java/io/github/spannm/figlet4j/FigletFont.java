@@ -100,6 +100,17 @@ public final class FigletFont {
         return rows == null ? null : deepCopy(rows);
     }
 
+    /**
+     * Returns the internal glyph for the given code point without copying it,
+     * for read-only use by the renderer.
+     *
+     * @param codepoint Unicode code point
+     * @return the glyph rows, or an empty glyph if unsupported; must not be modified
+     */
+    char[][] glyph(int codepoint) {
+        return characters.getOrDefault(codepoint, new char[0][]);
+    }
+
     /** Returns {@code true} if the font contains a glyph for the given code point. */
     public boolean supportsCodepoint(int codepoint) {
         return characters.containsKey(codepoint);

@@ -201,15 +201,16 @@ public final class FigletRenderer {
      * <p>
      * Leading space tokens at the start of a new wrapped line are discarded.
      * <p>
-     * The wrap decision is made by actually building the candidate band (via
-     * {@link #buildRows}) and measuring its real width, rather than by summing
+     * The wrap decision is made by actually appending the token to a copy of
+     * the current band and measuring its real width, rather than by summing
      * a per-glyph width estimate: the fitting overlap between two glyphs can
      * exceed either glyph's own width (e.g. a wide space glyph following a
      * glyph with few trailing spaces), a case a simple additive estimate
-     * cannot represent without diverging from what {@link #buildRows} actually
-     * produces. Measuring the real, tentative band keeps the wrap decision and
-     * the final output — {@link #flushLine} builds the same way — in agreement
-     * by construction.
+     * cannot represent. Measuring the real, tentative band keeps the wrap
+     * decision and the final output in agreement by construction. Since
+     * fitting only depends on the band built so far and its last glyph,
+     * extending a copy yields the same result as rebuilding the band from
+     * scratch, without the quadratic cost.
      *
      * @param words word and space tokens for one logical input line
      * @param out   output buffer to append rendered rows to
@@ -220,95 +221,36 @@ public final class FigletRenderer {
             return;
         }
 
-        List<String> currentLine = new ArrayList<>();
+        Band band = null;
 
         for (String token : words) {
-            List<String> candidate = new ArrayList<>(currentLine);
-            candidate.add(token);
+            Band candidate = band == null ? new Band(font.getHeight()) : new Band(band);
+            appendToken(candidate, token);
 
-            if (!currentLine.isEmpty() && renderedWidth(candidate) > width) {
-                flushLine(currentLine, out);
-                currentLine.clear();
+            if (band != null && candidate.width() > width) {
+                writeRows(band.rows, out);
+                band = null;
                 if (" ".equals(token)) {
                     continue; // discard leading space on wrapped line
                 }
-                candidate = new ArrayList<>(List.of(token));
+                candidate = new Band(font.getHeight());
+                appendToken(candidate, token);
             }
-            currentLine = candidate;
+            band = candidate;
         }
-        if (!currentLine.isEmpty()) {
-            flushLine(currentLine, out);
+        if (band != null) {
+            writeRows(band.rows, out);
         }
     }
 
     /**
-     * Returns the real rendered width (in columns) of {@code tokens}, i.e. the
-     * widest of its rows after trimming trailing spaces — the same measure
-     * {@link #flushLine} produces in its output.
+     * Appends the glyphs of all code points of {@code token} to {@code band}.
      *
-     * @param tokens word and space tokens forming one candidate band
-     * @return widest trimmed row width in columns; 0 for a band with no visible content
+     * @param band  the band to extend
+     * @param token a word or space token
      */
-    private int renderedWidth(List<String> tokens) {
-        int max = 0;
-        for (StringBuilder row : buildRows(tokens)) {
-            max = Math.max(max, trimmedLength(row));
-        }
-        return max;
-    }
-
-    /**
-     * Renders a list of word tokens as one horizontal ASCII art band into {@code out}.
-     * <p>
-     * Adjacent glyphs are fitted: their shared whitespace border is collapsed so
-     * that visible columns from neighbouring glyphs are exactly one space apart.
-     * The leading whitespace of the first glyph in the band is stripped so that
-     * the banner starts flush at column zero.
-     *
-     * @param tokens word and space tokens forming one visual line
-     * @param out    output buffer to append rendered rows to
-     */
-    private void flushLine(List<String> tokens, StringBuilder out) {
-        writeRows(buildRows(tokens), out);
-    }
-
-    /**
-     * Builds the per-row character buffers for one band of {@code tokens},
-     * fitting each resolved glyph against the previous one exactly as the
-     * final rendered output will. Shared by {@link #flushLine} (which writes
-     * the result) and {@link #renderedWidth} (which only measures it), so the
-     * wrap decision can never diverge from what actually gets rendered.
-     *
-     * @param tokens word and space tokens forming one band
-     * @return one {@link StringBuilder} per font row, holding the fitted glyphs
-     */
-    private StringBuilder[] buildRows(List<String> tokens) {
-        int height = font.getHeight();
-        StringBuilder[] rows = new StringBuilder[height];
-        for (int r = 0; r < height; r++) {
-            rows[r] = new StringBuilder();
-        }
-
-        char[][] prevGlyph = null;
-
-        for (String token : tokens) {
-            for (int codepoint : token.codePoints().toArray()) {
-                char[][] glyph = resolveGlyph(codepoint);
-                if (glyph.length == 0) {
-                    continue;
-                }
-
-                if (prevGlyph == null) {
-                    appendFirstGlyph(glyph, rows, height);
-                } else {
-                    appendFittedGlyph(glyph, prevGlyph, rows, height);
-                }
-
-                prevGlyph = glyph;
-            }
-        }
-
-        return rows;
+    private void appendToken(Band band, String token) {
+        token.codePoints().forEach(cp -> band.append(resolveGlyph(cp)));
     }
 
     /**
@@ -518,18 +460,20 @@ public final class FigletRenderer {
      * points are mapped to the {@code '?'} glyph. In strict mode this method
      * should never be called with an unsupported code point because
      * {@link #validateCodepoints} has already checked them; if it is nonetheless
-     * called (e.g. from {@link #renderedWidth} before validation), an empty
-     * glyph is returned, which the caller skips.
+     * called, an empty glyph is returned, which the caller skips.
+     * <p>
+     * The returned array is the font's internal glyph and must not be modified.
      *
      * @param cp Unicode code point
      * @return glyph rows, or an empty glyph if unsupported and strict mode is active
+     *         (or if the font lacks a {@code '?'} glyph in lenient mode)
      */
     private char[][] resolveGlyph(int cp) {
         if (font.supportsCodepoint(cp)) {
-            return font.getCharacter(cp);
+            return font.glyph(cp);
         }
         if (!strict) {
-            return font.getCharacter('?');
+            return font.glyph('?');
         }
         return new char[0][]; // strict mode: validated upstream, should not reach here
     }
@@ -542,6 +486,75 @@ public final class FigletRenderer {
      */
     private void appendBlankLine(StringBuilder out) {
         out.append("\n".repeat(Math.max(0, font.getHeight())));
+    }
+
+    /**
+     * One horizontal band of fitted glyphs under construction: the per-row
+     * buffers plus the last glyph appended, against which the next glyph is fitted.
+     */
+    private static final class Band {
+
+        private final StringBuilder[] rows;
+        private char[][]              prevGlyph;
+
+        /**
+         * Creates an empty band.
+         *
+         * @param height number of font rows
+         */
+        Band(int height) {
+            rows = new StringBuilder[height];
+            for (int r = 0; r < height; r++) {
+                rows[r] = new StringBuilder();
+            }
+        }
+
+        /**
+         * Creates a copy of {@code other} that can be extended independently.
+         *
+         * @param other the band to copy
+         */
+        Band(Band other) {
+            rows = new StringBuilder[other.rows.length];
+            for (int r = 0; r < rows.length; r++) {
+                rows[r] = new StringBuilder(other.rows[r]);
+            }
+            prevGlyph = other.prevGlyph;
+        }
+
+        /**
+         * Appends {@code glyph}, fitted against the previously appended glyph.
+         * The first glyph of a band is stripped of its uniform leading whitespace
+         * so that the output starts flush at column zero. Empty glyphs are skipped.
+         *
+         * @param glyph glyph row data
+         */
+        void append(char[][] glyph) {
+            if (glyph.length == 0) {
+                return;
+            }
+            if (prevGlyph == null) {
+                appendFirstGlyph(glyph, rows, rows.length);
+            } else {
+                appendFittedGlyph(glyph, prevGlyph, rows, rows.length);
+            }
+            prevGlyph = glyph;
+        }
+
+        /**
+         * Returns the real rendered width of this band, i.e. the widest row
+         * after trimming trailing spaces, the same measure {@link #writeRows} outputs.
+         *
+         * @return widest trimmed row width in columns; 0 for a band with no visible content
+         */
+        int width() {
+            int max = 0;
+            for (StringBuilder row : rows) {
+                max = Math.max(max, trimmedLength(row));
+            }
+            return max;
+        }
+
     }
 
 }
