@@ -34,10 +34,9 @@ import java.util.stream.Collectors;
  * This is intentionally <em>not</em> HTML: none of the three tag names are
  * HTML elements, nor do they carry HTML semantics. Parsing happens strictly
  * on the raw input; this class has no notion of {@code ${...}}-style
- * placeholders. Callers that need placeholder substitution (e.g. the Maven
- * plugin resolving {@code ${project.name}}) must do so <em>after</em> parsing,
- * via {@link FigletMarkupNode#withText(String)} on each node's already-isolated
- * text content — never on the raw markup string before parsing, since a
+ * placeholders. Callers that need placeholder substitution should do so
+ * <em>after</em> parsing, via {@link FigletMarkupNode#withText(String)} on each
+ * node's already-isolated text content — never on the raw markup string before parsing, since a
  * substituted value containing {@code <} or {@code >} could otherwise be
  * misinterpreted as markup structure.
  *

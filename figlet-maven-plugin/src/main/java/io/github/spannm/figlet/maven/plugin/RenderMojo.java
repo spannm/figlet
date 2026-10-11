@@ -221,9 +221,15 @@ public class RenderMojo extends AbstractFontMojo {
     }
 
     /**
-     * Resolves {@code ${...}} placeholders on each node's text content individually —
-     * never on the raw markup string — so that a resolved value containing
-     * {@code <} or {@code >} can never be reinterpreted as markup structure.
+     * Resolves {@code ${...}} placeholders on each node's text content individually.
+     * <p>
+     * Note that Maven itself interpolates {@code ${...}} expressions in the plugin
+     * configuration, including values passed via {@code -Dfiglet.content}, before
+     * this goal runs and therefore before the markup is parsed. Only placeholders
+     * Maven could not resolve reach this method, which is why its main job is to
+     * report them according to {@code strict}. For the same reason, a property
+     * value containing markup such as {@code <lineBreak/>} is interpreted as
+     * markup unless it appears inside a {@code <figletFont>} tag.
      */
     List<FigletMarkupNode> resolveNodeText(List<FigletMarkupNode> nodes) {
         List<FigletMarkupNode> resolved = new ArrayList<>(nodes.size());
@@ -284,7 +290,8 @@ public class RenderMojo extends AbstractFontMojo {
 
     /**
      * Resolves {@code ${property.name}} placeholders against Maven project properties
-     * (project model properties + user-defined properties).
+     * (project model properties + user-defined properties). Most placeholders are
+     * already resolved by Maven, see {@link #resolveNodeText(List)}.
      * <p>
      * An unresolved placeholder is handled the same way {@code strict} governs
      * unsupported characters during rendering: in strict mode (the default) it
