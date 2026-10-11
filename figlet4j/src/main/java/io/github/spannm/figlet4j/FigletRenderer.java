@@ -154,7 +154,7 @@ public final class FigletRenderer {
                 throw new FigletException(String.format(
                     "Character '%s' (U+%04X) is not supported by font '%s'. "
                     + "Use a different font, or set strict=false to replace unsupported characters.",
-                    cp < 32 ? "\\u" + Integer.toHexString(cp) : String.valueOf((char) cp),
+                    cp < 32 ? String.format("\\u%04X", cp) : new String(Character.toChars(cp)),
                     cp, font.getName()));
             }
         });

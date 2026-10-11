@@ -190,6 +190,19 @@ final class FigletRendererTest {
             .hasMessageContaining("U+");
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', quoteCharacter = '"', value = {
+        "\uD83D\uDE00    | Character '\uD83D\uDE00' (U+1F600)",
+        "\u00E9          | Character '\u00E9' (U+00E9)",
+        "\"\u0001\"      | Character '\\u0001' (U+0001)"
+    })
+    void render_strictModeUnsupportedCharacter_messageShowsCharacter(String input, String expected) {
+        FigletRenderer renderer = new FigletRenderer(testFont).setStrict(true);
+        assertThatThrownBy(() -> renderer.render(input))
+            .isInstanceOf(FigletException.class)
+            .hasMessageStartingWith(expected);
+    }
+
     @Test
     void render_strictMode_unsupportedCharacter_errorShouldIncludeFontName() {
         FigletRenderer renderer = new FigletRenderer(testFont).setStrict(true);
