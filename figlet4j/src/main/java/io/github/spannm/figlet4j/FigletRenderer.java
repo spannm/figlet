@@ -232,7 +232,7 @@ public final class FigletRenderer {
                 if (" ".equals(token)) {
                     continue; // discard leading space on wrapped line
                 }
-                candidate = List.of(token);
+                candidate = new ArrayList<>(List.of(token));
             }
             currentLine = candidate;
         }

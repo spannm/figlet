@@ -481,6 +481,15 @@ final class FigletRendererTest {
         assertThat(newlines).isGreaterThanOrEqualTo(testFont.getHeight());
     }
 
+    @Test
+    void render_wrappedWordWiderThanWidthFollowedByText_wrapsAgain() {
+        // "BBBB" moves to a new band but is still too wide on its own, so the
+        // following space must start yet another band
+        String result = new FigletRenderer(testFont).withWidth(6).render("A BBBB C");
+
+        assertThat(result).isEqualTo("##\n##\n## ## ## ##\n## ## ## ##\n##\n##\n");
+    }
+
     /**
      * Builds a font where every printable ASCII character and the seven Deutsch
      * extras map to {@code glyph}, and the space character maps to {@code spaceGlyph}.
