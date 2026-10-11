@@ -133,7 +133,7 @@ public final class FigletFontRegistry {
     public static void registerExternal(String fontName, Path path) {
         requireNonNull(fontName, "fontName");
         requireNonNull(path, "path");
-        LOGGER.log(Level.INFO, "Registering external font: {0} at {1}", fontName, path);
+        LOGGER.log(Level.DEBUG, "Registering external font: {0} at {1}", fontName, path);
         String key = fontName.toLowerCase(Locale.ROOT);
         EXTERNAL_FONTS.put(key, path);
         FONT_CACHE.remove(key);

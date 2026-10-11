@@ -135,7 +135,7 @@ public final class FigletFontLoader {
         String fileName = path.getFileName().toString();
         String name = FigletFontType.removeExtension(fileName);
 
-        LOGGER.log(Level.INFO, "Loading font from file: {0}", path);
+        LOGGER.log(Level.DEBUG, "Loading font from file: {0}", path);
         try (InputStream is = Files.newInputStream(path)) {
             return parse(name, is);
         } catch (IOException ex) {
