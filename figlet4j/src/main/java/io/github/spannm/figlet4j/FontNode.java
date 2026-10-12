@@ -8,7 +8,7 @@ import java.util.Objects;
  * Text to be rendered as ASCII art with a named font, or with the renderer's
  * default font if no name is given.
  *
- * @since 1.0.1
+ * @since 1.1.0
  */
 final class FontNode implements FigletMarkupNode {
 

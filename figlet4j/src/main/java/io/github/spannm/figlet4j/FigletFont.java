@@ -120,7 +120,7 @@ public final class FigletFont {
      * optional {@code print_direction} header field.
      *
      * @return {@code true} if {@code print_direction} is 1, {@code false} for left-to-right
-     * @since 1.0.1
+     * @since 1.1.0
      */
     public boolean isRightToLeft() {
         return rightToLeft;
@@ -132,7 +132,7 @@ public final class FigletFont {
      * if that is absent, by {@code old_layout} being -1.
      *
      * @return {@code true} for full width, {@code false} if glyphs are fitted or smushed
-     * @since 1.0.1
+     * @since 1.1.0
      */
     public boolean isFullWidth() {
         return (layout & (LAYOUT_FITTING | LAYOUT_SMUSHING)) == 0;
@@ -145,7 +145,7 @@ public final class FigletFont {
      * is absent, by a positive {@code old_layout}.
      *
      * @return {@code true} if glyphs are smushed
-     * @since 1.0.1
+     * @since 1.1.0
      */
     public boolean isSmushing() {
         return (layout & LAYOUT_SMUSHING) != 0;

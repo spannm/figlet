@@ -58,7 +58,7 @@ Add to your `pom.xml`:
 <plugin>
   <groupId>io.github.spannm</groupId>
   <artifactId>figlet-maven-plugin</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <executions>
     <execution>
       <goals>
@@ -83,20 +83,20 @@ The `<execution>` is required, otherwise the goal is never invoked. It binds to 
 <dependency>
   <groupId>io.github.spannm</groupId>
   <artifactId>figlet4j</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
 **Gradle (Groovy / `build.gradle`)**
 
 ```groovy
-implementation 'io.github.spannm:figlet4j:1.0.0'
+implementation 'io.github.spannm:figlet4j:1.1.0'
 ```
 
 **Gradle (Kotlin DSL / `build.gradle.kts`)**
 
 ```kotlin
-implementation("io.github.spannm:figlet4j:1.0.0")
+implementation("io.github.spannm:figlet4j:1.1.0")
 ```
 
 ## Quick Start

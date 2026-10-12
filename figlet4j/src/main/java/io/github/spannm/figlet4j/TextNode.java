@@ -5,7 +5,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Literal, unrendered text.
  *
- * @since 1.0.1
+ * @since 1.1.0
  */
 final class TextNode implements FigletMarkupNode {
 

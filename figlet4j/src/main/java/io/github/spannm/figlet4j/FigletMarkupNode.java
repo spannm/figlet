@@ -58,7 +58,7 @@ public interface FigletMarkupNode {
      * @param text the text to render as ASCII art; must not be {@code null}
      * @return a new {@link Type#FONT} node whose {@link #fontName()} is {@code null}
      * @throws NullPointerException if {@code text} is {@code null}
-     * @since 1.0.1
+     * @since 1.1.0
      */
     static FigletMarkupNode font(String text) {
         return new FontNode(null, text);

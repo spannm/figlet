@@ -3,7 +3,7 @@ package io.github.spannm.figlet4j;
 /**
  * An explicit, manually-placed line break.
  *
- * @since 1.0.1
+ * @since 1.1.0
  */
 final class LineBreakNode implements FigletMarkupNode {
 

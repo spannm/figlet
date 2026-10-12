@@ -66,7 +66,7 @@ public final class FigletMarkupRenderer {
      * Returns the font used for {@code FONT} nodes without a font name.
      *
      * @return the default font, or {@code null} if none was set
-     * @since 1.0.1
+     * @since 1.1.0
      */
     public FigletFont getDefaultFont() {
         return defaultFont;
@@ -79,7 +79,7 @@ public final class FigletMarkupRenderer {
      *
      * @param defaultFont the default font; may be {@code null} to unset it
      * @return this renderer for fluent chaining
-     * @since 1.0.1
+     * @since 1.1.0
      */
     public FigletMarkupRenderer withDefaultFont(FigletFont defaultFont) {
         this.defaultFont = defaultFont;
