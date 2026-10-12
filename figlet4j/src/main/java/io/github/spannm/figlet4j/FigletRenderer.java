@@ -84,7 +84,7 @@ public final class FigletRenderer {
      */
     public FigletRenderer withWidth(int width) {
         if (width < 1) {
-            throw new IllegalArgumentException("width must be >= 1, got: " + width);
+            throw new IllegalArgumentException(String.format("width must be >= 1, got: %d", width));
         }
         this.width = width;
         return this;

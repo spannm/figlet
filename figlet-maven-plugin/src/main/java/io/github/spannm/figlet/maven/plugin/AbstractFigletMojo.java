@@ -32,11 +32,11 @@ abstract class AbstractFigletMojo extends AbstractMojo {
     @Override
     public final void execute() throws MojoExecutionException, MojoFailureException {
         if (parmSkip) {
-            getLog().info("Skipping figlet goal '" + getClass().getSimpleName() + "' (figlet.skip=true).");
+            getLog().info(String.format("Skipping figlet goal '%s' (figlet.skip=true).", getClass().getSimpleName()));
             return;
         }
 
-        getLog().debug("Executing figlet goal '" + getClass().getSimpleName() + "'");
+        getLog().debug(String.format("Executing figlet goal '%s'", getClass().getSimpleName()));
         executeImpl();
     }
 

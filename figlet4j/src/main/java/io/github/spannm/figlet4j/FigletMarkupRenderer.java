@@ -100,7 +100,7 @@ public final class FigletMarkupRenderer {
      */
     public FigletMarkupRenderer withWidth(int width) {
         if (width < 1) {
-            throw new IllegalArgumentException("width must be >= 1, got: " + width);
+            throw new IllegalArgumentException(String.format("width must be >= 1, got: %d", width));
         }
         this.width = width;
         return this;
@@ -189,10 +189,10 @@ public final class FigletMarkupRenderer {
             font = fontResolver.apply(fontName);
         } catch (FigletException ex) {
             throw new FigletException(
-                "Failed to resolve font '" + fontName + "' referenced in figlet markup: " + ex.getMessage(), ex);
+                String.format("Failed to resolve font '%s' referenced in figlet markup: %s", fontName, ex.getMessage()), ex);
         }
         if (font == null) {
-            throw new FigletException("Unknown font '" + fontName + "' referenced in figlet markup.");
+            throw new FigletException(String.format("Unknown font '%s' referenced in figlet markup.", fontName));
         }
 
         return renderWith(font, node.text());

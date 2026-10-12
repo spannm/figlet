@@ -61,22 +61,22 @@ abstract class AbstractFontMojo extends AbstractFigletMojo {
         try {
             if (parmFontFile != null) {
                 if (parmFont != null && !parmFont.isBlank() && !DEFAULT_FONT.equals(parmFont)) {
-                    getLog().debug("Both 'font' (" + parmFont + ") and 'fontFile' (" + parmFontFile
-                        + ") are configured; 'fontFile' takes precedence.");
+                    getLog().debug(String.format("Both 'font' (%s) and 'fontFile' (%s) are configured; "
+                        + "'fontFile' takes precedence.", parmFont, parmFontFile));
                 }
-                getLog().debug("Loading external font from: " + parmFontFile);
+                getLog().debug(String.format("Loading external font from: %s", parmFontFile));
                 FigletFont font = FigletFontLoader.loadFromFile(parmFontFile.toPath());
-                getLog().info("Using external font '" + font.getName() + "' from " + parmFontFile);
+                getLog().info(String.format("Using external font '%s' from %s", font.getName(), parmFontFile));
                 return font;
             }
 
             String fontName = Optional.ofNullable(parmFont).filter(s -> !s.isBlank()).orElse(DEFAULT_FONT);
-            getLog().debug("Loading built-in font: " + fontName);
+            getLog().debug(String.format("Loading built-in font: %s", fontName));
             FigletFont font = FigletFontRegistry.loadFont(fontName);
-            getLog().debug("Using built-in font '" + font.getName() + "'");
+            getLog().debug(String.format("Using built-in font '%s'", font.getName()));
             return font;
         } catch (FigletException ex) {
-            throw new MojoExecutionException("Failed to load FIGfont: " + ex.getMessage(), ex);
+            throw new MojoExecutionException(String.format("Failed to load FIGfont: %s", ex.getMessage()), ex);
         }
     }
 

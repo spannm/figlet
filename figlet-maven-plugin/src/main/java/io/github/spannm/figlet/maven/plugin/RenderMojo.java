@@ -175,20 +175,19 @@ public class RenderMojo extends AbstractFontMojo {
         try {
             nodes = FigletMarkupParser.parse(parmContent);
         } catch (FigletException ex) {
-            throw new MojoFailureException("Failed to parse figlet content: " + ex.getMessage(), ex);
+            throw new MojoFailureException(String.format("Failed to parse figlet content: %s", ex.getMessage()), ex);
         }
 
         List<FigletMarkupNode> resolvedNodes;
         try {
             resolvedNodes = resolveNodeText(nodes);
         } catch (FigletException ex) {
-            throw new MojoFailureException("Failed to resolve property placeholder: " + ex.getMessage(), ex);
+            throw new MojoFailureException(String.format("Failed to resolve property placeholder: %s", ex.getMessage()), ex);
         }
         boolean hasFontTag = resolvedNodes.stream().anyMatch(FigletMarkupNode::isFont);
 
-        getLog().debug("Rendering figlet content (" + resolvedNodes.size() + " node(s), "
-            + (hasFontTag ? "markup mode" : "single-font mode") + "), width=" + getWidth()
-            + ", strict=" + parmStrict);
+        getLog().debug(String.format("Rendering figlet content (%d node(s), %s), width=%d, strict=%b",
+            resolvedNodes.size(), hasFontTag ? "markup mode" : "single-font mode", getWidth(), parmStrict));
 
         String renderedText;
         try {
@@ -211,11 +210,11 @@ public class RenderMojo extends AbstractFontMojo {
                 renderedText = new FigletRenderer(font).withWidth(getWidth()).setStrict(parmStrict).render(plainText);
             }
         } catch (FigletException ex) {
-            throw new MojoFailureException("Rendering failed: " + ex.getMessage(), ex);
+            throw new MojoFailureException(String.format("Rendering failed: %s", ex.getMessage()), ex);
         }
 
         int lineCount = renderedText.split("\n", -1).length;
-        getLog().debug("Rendered banner (" + lineCount + " line(s)), writing to target '" + parmTarget + "'");
+        getLog().debug(String.format("Rendered banner (%d line(s)), writing to target '%s'", lineCount, parmTarget));
 
         doOutput(renderedText, OutputTarget.of(parmTarget));
     }
@@ -237,7 +236,7 @@ public class RenderMojo extends AbstractFontMojo {
             String original = node.text();
             String resolvedText = resolveProperties(original);
             if (!original.equals(resolvedText)) {
-                getLog().debug("Resolved '" + original + "' to '" + resolvedText + "'");
+                getLog().debug(String.format("Resolved '%s' to '%s'", original, resolvedText));
             }
             resolved.add(node.withText(resolvedText));
         }
@@ -315,10 +314,10 @@ public class RenderMojo extends AbstractFontMojo {
             }
             if (value == null) {
                 if (parmStrict) {
-                    throw new FigletException("Unresolved property placeholder '${" + key + "}'. "
-                        + "Set strict=false to leave unresolved placeholders as-is instead of failing.");
+                    throw new FigletException(String.format("Unresolved property placeholder '${%s}'. "
+                        + "Set strict=false to leave unresolved placeholders as-is instead of failing.", key));
                 }
-                getLog().warn("figlet-maven-plugin: unresolved property placeholder '${" + key + "}'");
+                getLog().warn(String.format("figlet-maven-plugin: unresolved property placeholder '${%s}'", key));
                 value = m.group(0); // leave as-is
             }
             m.appendReplacement(sb, Matcher.quoteReplacement(value));
@@ -358,8 +357,8 @@ public class RenderMojo extends AbstractFontMojo {
             try {
                 value = readBeanProperty(value, segment);
             } catch (ReflectiveOperationException ex) {
-                getLog().debug("figlet-maven-plugin: could not resolve '" + key
-                    + "' via reflection (" + ex.getMessage() + ")");
+                getLog().debug(String.format("figlet-maven-plugin: could not resolve '%s' via reflection (%s)",
+                    key, ex.getMessage()));
                 return null;
             }
         }
@@ -387,7 +386,7 @@ public class RenderMojo extends AbstractFontMojo {
                 // try the next prefix
             }
         }
-        throw new NoSuchMethodException(bean.getClass().getName() + "." + propertyName);
+        throw new NoSuchMethodException(String.format("%s.%s", bean.getClass().getName(), propertyName));
     }
 
     Properties collectProperties() {

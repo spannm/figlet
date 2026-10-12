@@ -105,9 +105,9 @@ public class ListFontsMojo extends AbstractFigletMojo {
             return;
         }
 
-        getLog().debug("Listing " + fontNames.size() + " font(s)"
-            + (parmMetadata ? ", with metadata" : "")
-            + (parmPrintSample ? ", with samples (width=" + parmWidth + ")" : ""));
+        getLog().debug(String.format("Listing %d font(s)%s%s", fontNames.size(),
+            parmMetadata ? ", with metadata" : "",
+            parmPrintSample ? String.format(", with samples (width=%d)", parmWidth) : ""));
 
         String header = "Available fonts (" + fontNames.size() + " total):";
 
@@ -139,14 +139,14 @@ public class ListFontsMojo extends AbstractFigletMojo {
             }
         }
 
-        getLog().info("Use -D" + FIGLET_METADATA + "=true for font metadata details.");
-        getLog().info("Use -D" + FIGLET_SAMPLE + "=true to render a sample for each font.");
+        getLog().info(String.format("Use -D%s=true for font metadata details.", FIGLET_METADATA));
+        getLog().info(String.format("Use -D%s=true to render a sample for each font.", FIGLET_SAMPLE));
         getLog().info("Configure the font in your pom.xml: <font>font-name</font>");
         getLog().info("");
 
         if (failureCount > 0) {
-            getLog().warn(failureCount + " of " + fontNames.size()
-                + " font(s) could not be fully processed — see warnings above for details.");
+            getLog().warn(String.format("%d of %d font(s) could not be fully processed — see warnings above for details.",
+                failureCount, fontNames.size()));
         }
     }
 

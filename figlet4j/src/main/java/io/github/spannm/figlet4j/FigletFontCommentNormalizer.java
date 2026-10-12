@@ -63,7 +63,7 @@ final class FigletFontCommentNormalizer {
 
     private FigletFontCommentNormalizer() {
         throw new UnsupportedOperationException(
-            "Utility class " + getClass().getSimpleName() + " cannot be instantiated");
+            String.format("Utility class %s cannot be instantiated", getClass().getSimpleName()));
     }
 
     static List<String> normalizeComment(String fontName, List<String> comment) {

@@ -35,7 +35,7 @@ public class HelpMojo extends AbstractFigletMojo {
     protected void executeImpl() {
         try (InputStream is = getClass().getResourceAsStream(HELP_RESOURCE)) {
             if (is == null) {
-                getLog().error("Help content resource not found: " + HELP_RESOURCE);
+                getLog().error(String.format("Help content resource not found: %s", HELP_RESOURCE));
                 return;
             }
 

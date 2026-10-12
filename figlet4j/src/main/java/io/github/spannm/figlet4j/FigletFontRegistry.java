@@ -57,7 +57,7 @@ public final class FigletFontRegistry {
 
     private FigletFontRegistry() {
         throw new UnsupportedOperationException(
-            "Utility class " + getClass().getSimpleName() + " cannot be instantiated");
+            String.format("Utility class %s cannot be instantiated", getClass().getSimpleName()));
     }
 
     /**
@@ -113,8 +113,8 @@ public final class FigletFontRegistry {
         if (extPath != null) {
             return FigletFontLoader.loadFromFile(extPath);
         }
-        throw new FigletException("No font named '" + fontName + "' found. "
-            + "Use the list-fonts goal to list all available fonts.");
+        throw new FigletException(String.format("No font named '%s' found. "
+            + "Use the list-fonts goal to list all available fonts.", fontName));
     }
 
     /**
@@ -232,7 +232,7 @@ public final class FigletFontRegistry {
 
         private FontHolder() {
             throw new UnsupportedOperationException(
-                "Utility class " + getClass().getSimpleName() + " cannot be instantiated");
+                String.format("Utility class %s cannot be instantiated", getClass().getSimpleName()));
         }
 
         /**

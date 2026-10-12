@@ -73,7 +73,7 @@ public final class FigletFontLoader {
 
     private FigletFontLoader() {
         throw new UnsupportedOperationException(
-            "Utility class " + getClass().getSimpleName() + " cannot be instantiated");
+            String.format("Utility class %s cannot be instantiated", getClass().getSimpleName()));
     }
 
     /**
@@ -89,7 +89,7 @@ public final class FigletFontLoader {
         if (resourcePath != null) {
             return loadBuiltin(fontName, resourcePath);
         }
-        throw new FigletException("Bundled font not found on classpath: " + fontName);
+        throw new FigletException(String.format("Bundled font not found on classpath: %s", fontName));
     }
 
     /**
@@ -110,11 +110,11 @@ public final class FigletFontLoader {
             try (InputStream is = url.openStream()) {
                 return parse(fontName, is);
             } catch (IOException ex) {
-                throw new FigletException("Failed to read bundled font: " + resourcePath, ex);
+                throw new FigletException(String.format("Failed to read bundled font: %s", resourcePath), ex);
             }
         }
 
-        throw new FigletException("Bundled font resource not found on classpath: " + resourcePath);
+        throw new FigletException(String.format("Bundled font resource not found on classpath: %s", resourcePath));
     }
 
     /**
@@ -127,9 +127,9 @@ public final class FigletFontLoader {
     public static FigletFont loadFromFile(Path path) {
         requireNonNull(path, "path");
         if (!Files.exists(path)) {
-            throw new FigletException("Font file not found: " + path);
+            throw new FigletException(String.format("Font file not found: %s", path));
         } else if (!Files.isReadable(path)) {
-            throw new FigletException("Font file not readable: " + path);
+            throw new FigletException(String.format("Font file not readable: %s", path));
         }
 
         String fileName = path.getFileName().toString();
@@ -139,7 +139,7 @@ public final class FigletFontLoader {
         try (InputStream is = Files.newInputStream(path)) {
             return parse(name, is);
         } catch (IOException ex) {
-            throw new FigletException("Failed to read font file: " + path, ex);
+            throw new FigletException(String.format("Failed to read font file: %s", path), ex);
         }
     }
 
@@ -162,7 +162,7 @@ public final class FigletFontLoader {
     private static FigletFont parse(String fontName, InputStream is) {
         List<String> lines = readLines(is);
         if (lines.isEmpty()) {
-            throw new FigletException("Font file is empty: " + fontName);
+            throw new FigletException(String.format("Font file is empty: %s", fontName));
         }
 
         // header
@@ -173,16 +173,16 @@ public final class FigletFontLoader {
         } else if (header.startsWith(MAGIC_TLF)) {
             magic = MAGIC_TLF;
         } else {
-            throw new FigletException("Not a valid FIGfont or TOIlet font (missing signature): " + fontName);
+            throw new FigletException(String.format("Not a valid FIGfont or TOIlet font (missing signature): %s", fontName));
         }
 
         if (header.length() <= magic.length()) {
-            throw new FigletException("Malformed font header (missing hardblank character) in font: " + fontName);
+            throw new FigletException(String.format("Malformed font header (missing hardblank character) in font: %s", fontName));
         }
         char hardblank = header.charAt(magic.length());
         String[] parts = header.substring(magic.length() + 1).trim().split("\\s+");
         if (parts.length < 5) {
-            throw new FigletException("Malformed font header in font: " + fontName);
+            throw new FigletException(String.format("Malformed font header in font: %s", fontName));
         }
 
         int height;
@@ -193,25 +193,25 @@ public final class FigletFontLoader {
             baseline = Integer.parseInt(parts[1]);
             commentLines = Integer.parseInt(parts[4]);
         } catch (NumberFormatException ex) {
-            throw new FigletException("Malformed font header (non-numeric field) in font: " + fontName, ex);
+            throw new FigletException(String.format("Malformed font header (non-numeric field) in font: %s", fontName), ex);
         }
 
         // print_direction is optional: 0 = left-to-right, 1 = right-to-left
         boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
 
         if (height <= 0) {
-            throw new FigletException(
-                "Malformed font header (height must be a positive number, was " + height + ") in font: " + fontName);
+            throw new FigletException(String.format(
+                "Malformed font header (height must be a positive number, was %d) in font: %s", height, fontName));
         }
         if (commentLines < 0) {
-            throw new FigletException(
-                "Malformed font header (comment_lines must not be negative, was " + commentLines + ") in font: " + fontName);
+            throw new FigletException(String.format(
+                "Malformed font header (comment_lines must not be negative, was %d) in font: %s", commentLines, fontName));
         }
 
         // comment block
         int dataStart = 1 + commentLines;
         if (dataStart > lines.size()) {
-            throw new FigletException("Font file too short to contain comment block: " + fontName);
+            throw new FigletException(String.format("Font file too short to contain comment block: %s", fontName));
         }
 
         List<String> rawComment = lines.subList(1, dataStart);
