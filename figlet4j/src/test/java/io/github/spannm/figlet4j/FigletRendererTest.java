@@ -9,7 +9,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -278,60 +277,6 @@ final class FigletRendererTest {
         }
     }
 
-    @Test
-    void fittingOverlap_identicalGlyphs_shouldComputeCorrectOverlap() {
-        // GLYPH_NORMAL: trailing=2, leading=0 → overlap = 2+0-1 = 1
-        int overlap = FigletRenderer.fittingOverlap(rows(GLYPH_NORMAL), GLYPH_NORMAL);
-        assertThat(overlap).isEqualTo(1);
-    }
-
-    @Test
-    void fittingOverlap_paddedGlyph_shouldComputeCorrectOverlap() {
-        // left trailing=1, right leading=1 → 1+1-1 = 1
-        int overlap = FigletRenderer.fittingOverlap(rows(GLYPH_PADDED), GLYPH_PADDED);
-        assertThat(overlap).isEqualTo(1);
-    }
-
-    @Test
-    void fittingOverlap_normalThenPadded_shouldUseMinimumAcrossRows() {
-        // GLYPH_A row0: trailing=2, GLYPH_B row0: leading=2 → 2+2-1=3
-        // GLYPH_A row1: trailing=3, GLYPH_B row1: leading=1 → 3+1-1=3
-        // min(3,3) = 3
-        int overlap = FigletRenderer.fittingOverlap(rows(GLYPH_A), GLYPH_B);
-        assertThat(overlap).isEqualTo(3);
-    }
-
-    @Test
-    void fittingOverlap_noWhitespace_shouldReturnZero() {
-        // Glyphs with no trailing/leading spaces: overlap = 0+0-1 = -1 → clamped to 0
-        char[][] solid = {{'#', '#'}, {'#', '#'}};
-        int overlap = FigletRenderer.fittingOverlap(rows(solid), solid);
-        assertThat(overlap).isZero();
-    }
-
-    @Test
-    void fittingOverlap_constrainedByNarrowestRow_shouldReturnMinimum() {
-        char[][] left  = {{'#', ' ', ' '}, {'#', '#', '#'}};  // trailing: 2, 0
-        char[][] right = {{' ', ' ', '#'}, {' ', ' ', '#'}};  // leading:  2, 2
-        // row0: 2+2-1=3, row1: 0+2-1=1 → min=1
-        int overlap = FigletRenderer.fittingOverlap(rows(left), right);
-        assertThat(overlap).isEqualTo(1);
-    }
-
-    @ParameterizedTest
-    @CsvSource(delimiter = '|', value = {
-        "''      | 0",
-        "'#'     | 0",
-        "' '     | 1",
-        "'# '    | 1",
-        "'#  '   | 2",
-        "'  #  ' | 2",
-        "'   '   | 3"
-    })
-    void trailingSpaces_variousInputs_shouldCountCorrectly(String input, int expected) {
-        assertThat(FigletRenderer.trailingSpaces(input)).isEqualTo(expected);
-    }
-
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "''     | 0",
@@ -344,33 +289,6 @@ final class FigletRendererTest {
     })
     void leadingSpaces_variousInputs_shouldCountCorrectly(String input, int expected) {
         assertThat(FigletRenderer.leadingSpaces(input.toCharArray())).isEqualTo(expected);
-    }
-
-    @Test
-    void leadingSpacesOfGlyph_nullGlyph_shouldReturnZero() {
-        assertThat(FigletRenderer.leadingSpacesOfGlyph(null)).isZero();
-    }
-
-    @Test
-    void leadingSpacesOfGlyph_emptyGlyph_shouldReturnZero() {
-        assertThat(FigletRenderer.leadingSpacesOfGlyph(new char[0][])).isZero();
-    }
-
-    @Test
-    void leadingSpacesOfGlyph_uniformLeading_shouldReturnMinimum() {
-        // Both rows have 1 leading space → min = 1
-        assertThat(FigletRenderer.leadingSpacesOfGlyph(GLYPH_PADDED)).isEqualTo(1);
-    }
-
-    @Test
-    void leadingSpacesOfGlyph_asymmetricLeading_shouldReturnMinimum() {
-        // GLYPH_B row0: 2 leading, row1: 1 leading → min = 1
-        assertThat(FigletRenderer.leadingSpacesOfGlyph(GLYPH_B)).isEqualTo(1);
-    }
-
-    @Test
-    void leadingSpacesOfGlyph_noLeadingSpaces_shouldReturnZero() {
-        assertThat(FigletRenderer.leadingSpacesOfGlyph(GLYPH_NORMAL)).isZero();
     }
 
     @Test
@@ -470,13 +388,6 @@ final class FigletRendererTest {
     }
 
     @Test
-    void fittingOverlap_emptyGlyphRows_shouldReturnZero() {
-        char[][] empty = new char[0][];
-        int overlap = FigletRenderer.fittingOverlap(rows(empty), empty);
-        assertThat(overlap).isZero();
-    }
-
-    @Test
     void render_withCustomWidth_shouldRespectConfiguredLimit() {
         FigletRenderer renderer = new FigletRenderer(testFont).withWidth(2);
         String result = renderer.render("ABCDE");
@@ -514,9 +425,9 @@ final class FigletRendererTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-        "B A | ' ## ##' | '##  #'",
-        "B B | ' ## ##' | '## ##'",
-        "A A | '## ##'  | '#  #'"
+        "B A | ' ####' | '## #'",
+        "B B | ' ####' | '####'",
+        "A A | '####'  | '# #'"
     })
     void render_blankGlyphBetweenWords_shiftsAllRowsEqually(String text, String row0, String row1) {
         // the blank space glyph is fitted away; fitting the next glyph against the
@@ -529,7 +440,7 @@ final class FigletRendererTest {
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         "A A   | '##  ##'",
-        "A  A  | '##    ##'",
+        "A  A  | '##   ##'",
         "A     | '##'",
         "' A'  | ' ##'"
     })
@@ -635,12 +546,7 @@ final class FigletRendererTest {
         // following space must start yet another band
         String result = new FigletRenderer(testFont).withWidth(6).render("A BBBB C");
 
-        assertThat(result).isEqualTo("##\n##\n## ## ## ##\n## ## ## ##\n##\n##\n");
-    }
-
-    /** Converts glyph rows to rendered rows, as passed to {@link FigletRenderer#fittingOverlap}. */
-    private static CharSequence[] rows(char[][] glyph) {
-        return Arrays.stream(glyph).map(String::new).toArray(CharSequence[]::new);
+        assertThat(result).isEqualTo("##\n##\n########\n########\n##\n##\n");
     }
 
     /**

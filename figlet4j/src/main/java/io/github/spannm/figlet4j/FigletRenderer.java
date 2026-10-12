@@ -28,9 +28,9 @@ import java.util.List;
  * split is performed).
  *
  * <h2>Kerning / fitting</h2>
- * Adjacent glyphs are moved together until they touch: the trailing spaces of
- * the left glyph and the leading spaces of the right glyph are both removed,
- * leaving exactly one space of padding between any two visible columns.
+ * Adjacent glyphs are moved together until they touch, as by the original
+ * FIGlet: the blank columns between the visible characters of two glyphs are
+ * removed. The first glyph of a line is stripped of its uniform leading blanks.
  * Hardblanks (see {@link FigletFont#getHardblank()}) count as visible while
  * fitting and are printed as spaces, which is what keeps the space character
  * of most fonts from being fitted away. Fonts whose header asks for full width
@@ -308,23 +308,6 @@ public final class FigletRenderer {
     }
 
     /**
-     * Appends the first glyph of a band to {@code rows}, stripping uniform
-     * leading whitespace so the output starts flush at column zero.
-     *
-     * @param glyph  glyph row data
-     * @param rows   per-row output buffers
-     * @param height number of font rows
-     */
-    private static void appendFirstGlyph(char[][] glyph, StringBuilder[] rows, int height) {
-        int skip = leadingSpacesOfGlyph(glyph);
-        for (int r = 0; r < height; r++) {
-            char[] row = r < glyph.length ? glyph[r] : new char[0];
-            int s = Math.min(skip, row.length);
-            rows[r].append(row, s, row.length - s);
-        }
-    }
-
-    /**
      * Smushes two horizontally adjacent characters according to the smushing
      * rules in {@code layout}, as defined by the FIGfont specification. A blank
      * yields the other character. Without any rule bit, universal smushing
@@ -462,71 +445,6 @@ public final class FigletRenderer {
     }
 
     /**
-     * Appends a subsequent glyph to {@code rows}, fitted against the content
-     * already in {@code rows}.
-     * <p>
-     * For each row:
-     * <ol>
-     *   <li>Trailing spaces are removed from the accumulated buffer up to
-     *       {@code overlap} columns.</li>
-     *   <li>Leading spaces of the incoming glyph row are skipped up to the
-     *       remaining deficit.</li>
-     *   <li>The remaining glyph row content is appended.</li>
-     * </ol>
-     * Since the overlap is computed from the buffer itself, every row has
-     * enough spaces to collapse, so all rows are shifted by the same amount.
-     *
-     * @param glyph  glyph row data to append
-     * @param rows   per-row output buffers
-     * @param height number of font rows
-     */
-    private static void appendFittedGlyph(char[][] glyph, StringBuilder[] rows, int height) {
-        int overlap = fittingOverlap(rows, glyph);
-        for (int r = 0; r < height; r++) {
-            char[] row = r < glyph.length ? glyph[r] : new char[0];
-            int removed = removeTrailingSpaces(rows[r], overlap);
-            int skip    = skipLeadingSpaces(row, overlap - removed);
-            rows[r].append(row, skip, row.length - skip);
-        }
-    }
-
-    /**
-     * Removes up to {@code maxRemove} trailing space characters from {@code sb}.
-     *
-     * @param sb        the buffer to trim in place
-     * @param maxRemove maximum number of spaces to remove
-     * @return the actual number of spaces removed
-     */
-    private static int removeTrailingSpaces(StringBuilder sb, int maxRemove) {
-        int end = sb.length();
-        int removed = 0;
-        while (removed < maxRemove && end - removed - 1 >= 0
-               && sb.charAt(end - removed - 1) == ' ') {
-            removed++;
-        }
-        if (removed > 0) {
-            sb.delete(end - removed, end);
-        }
-        return removed;
-    }
-
-    /**
-     * Returns the number of leading space characters to skip in {@code row},
-     * capped at {@code maxSkip}.
-     *
-     * @param row     glyph row character data
-     * @param maxSkip upper bound on spaces to skip
-     * @return number of leading spaces to skip; in range {@code [0, maxSkip]}
-     */
-    private static int skipLeadingSpaces(char[] row, int maxSkip) {
-        int skip = 0;
-        while (skip < row.length && skip < maxSkip && row[skip] == ' ') {
-            skip++;
-        }
-        return skip;
-    }
-
-    /**
      * Appends each output line of {@code band} followed by a newline to {@code out}.
      *
      * @param band the finished band
@@ -553,50 +471,6 @@ public final class FigletRenderer {
     }
 
     /**
-     * Computes the fitting overlap between the content rendered so far and the next glyph.
-     * <p>
-     * Fitting moves the glyph towards the content until their visible columns
-     * are separated by exactly one space column. For each font row the candidate
-     * overlap is:
-     * <pre>
-     *   trailingSpaces(leftRow) + leadingSpaces(rightRow) - 1
-     * </pre>
-     * The {@code -1} preserves exactly one space of separation. The minimum
-     * across all rows is used so that no row's visible content collides.
-     * <p>
-     * The left side must be the actual rendered rows rather than the previous
-     * glyph alone: a blank row of the previous glyph may itself have been
-     * partly collapsed, leaving fewer trailing spaces than the glyph defines.
-     *
-     * @param left  rows rendered so far; must not be {@code null}
-     * @param right glyph rows of the next character; must not be {@code null}
-     * @return number of columns to collapse; always &gt;= 0
-     */
-    static int fittingOverlap(CharSequence[] left, char[][] right) {
-        int height = Math.min(left.length, right.length);
-        int minOverlap = Integer.MAX_VALUE;
-
-        for (int r = 0; r < height; r++) {
-            int trailing  = trailingSpaces(left[r]);
-            int leading   = leadingSpaces(right[r]);
-            int rowOverlap = trailing + leading - 1;
-            minOverlap = Math.min(minOverlap, rowOverlap);
-        }
-
-        return Math.max(0, minOverlap == Integer.MAX_VALUE ? 0 : minOverlap);
-    }
-
-    /**
-     * Returns the number of trailing space characters in {@code row}.
-     *
-     * @param row one rendered or glyph row
-     * @return trailing space count; 0 if the row is empty or ends with a non-space
-     */
-    static int trailingSpaces(CharSequence row) {
-        return row.length() - trimmedLength(row);
-    }
-
-    /**
      * Returns the number of leading space characters in {@code row}.
      *
      * @param row character data of one glyph row
@@ -608,25 +482,6 @@ public final class FigletRenderer {
             count++;
         }
         return count;
-    }
-
-    /**
-     * Returns the uniform leading whitespace of a glyph: the minimum number of
-     * leading spaces across all rows. This value is stripped from the first glyph
-     * of every rendered band so that output starts flush at column zero.
-     *
-     * @param glyph glyph row data; may be {@code null} or empty
-     * @return minimum leading spaces across all rows; 0 for a null or empty glyph
-     */
-    static int leadingSpacesOfGlyph(char[][] glyph) {
-        if (glyph == null || glyph.length == 0) {
-            return 0;
-        }
-        int min = Integer.MAX_VALUE;
-        for (char[] row : glyph) {
-            min = Math.min(min, leadingSpaces(row));
-        }
-        return min == Integer.MAX_VALUE ? 0 : min;
     }
 
     /**
@@ -689,7 +544,6 @@ public final class FigletRenderer {
         private final boolean         mirrored;
         private final int             layout;
         private final char            hardblank;
-        private boolean               empty     = true;
         private int                   prevWidth;
 
         /**
@@ -723,16 +577,13 @@ public final class FigletRenderer {
             mirrored = other.mirrored;
             layout = other.layout;
             hardblank = other.hardblank;
-            empty = other.empty;
             prevWidth = other.prevWidth;
         }
 
         /**
-         * Appends {@code glyph}, fitted against the content of this band.
-         * The first glyph of a band is stripped of its uniform leading whitespace
-         * so that the output starts flush at column zero. At full width, the
-         * glyph is appended unchanged instead, and smushing fonts smush it.
-         * Empty glyphs are skipped.
+         * Appends {@code glyph}, fitted or smushed against the content of this
+         * band. At full width, the glyph is appended unchanged instead. Empty
+         * glyphs are skipped.
          *
          * @param glyph glyph row data
          */
@@ -742,26 +593,22 @@ public final class FigletRenderer {
             }
             if ((layout & (FigletFont.LAYOUT_FITTING | FigletFont.LAYOUT_SMUSHING)) == 0) {
                 appendUnfittedGlyph(glyph, rows);
-            } else if (empty) {
-                appendFirstGlyph(glyph, rows, rows.length);
-            } else if ((layout & FigletFont.LAYOUT_SMUSHING) != 0) {
-                appendSmushedGlyph(glyph);
             } else {
-                appendFittedGlyph(glyph, rows, rows.length);
+                appendOverlappingGlyph(glyph);
             }
-            empty = false;
             prevWidth = glyph[0].length;
         }
 
         /**
-         * Appends {@code glyph} smushed against the content of this band: the
+         * Appends {@code glyph} overlapping the content of this band: the
          * overlapping columns are merged character by character, the rest of
-         * the glyph is appended.
+         * the glyph is appended. For the first glyph of a band, the overlap
+         * strips its uniform leading blanks.
          *
          * @param glyph glyph row data
          */
-        private void appendSmushedGlyph(char[][] glyph) {
-            int amount = smushAmount(glyph);
+        private void appendOverlappingGlyph(char[][] glyph) {
+            int amount = overlapAmount(glyph);
             int width  = glyph[0].length;
             for (int r = 0; r < rows.length; r++) {
                 StringBuilder row = rows[r];
@@ -787,14 +634,15 @@ public final class FigletRenderer {
         /**
          * Computes by how many columns {@code glyph} is moved into the content
          * of this band: per row, until its first visible character touches the
-         * last visible character of the row, plus one if the two can be smushed.
+         * last visible character of the row, plus one if the two can be smushed
+         * (which, without smushing, only a blank can).
          * The minimum across all rows is used, but never more than the width of
          * the glyph.
          *
          * @param glyph glyph row data
          * @return number of overlapping columns
          */
-        private int smushAmount(char[][] glyph) {
+        private int overlapAmount(char[][] glyph) {
             int width  = glyph[0].length;
             int amount = width;
             for (int r = 0; r < rows.length; r++) {
