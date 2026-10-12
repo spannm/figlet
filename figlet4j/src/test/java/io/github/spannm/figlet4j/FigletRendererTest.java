@@ -508,6 +508,22 @@ final class FigletRendererTest {
         assertThat(FigletRenderer.mirror(glyph)).isDeepEqualTo(new char[][] {{'c', 'b', 'a'}, {' ', ' ', 'd'}});
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "A A   | '##  ##'",
+        "A  A  | '##    ##'",
+        "A     | '##'",
+        "' A'  | ' ##'"
+    })
+    void render_spaceGlyphWithHardblank_keepsSpaceVisible(String text, String expectedRow) {
+        // hardblanks must not be fitted away, but are printed as spaces
+        FigletFont font = buildUniformFont(GLYPH_NORMAL, new char[][] {{' ', '$'}, {' ', '$'}});
+
+        String result = new FigletRenderer(font).render(text);
+
+        assertThat(result).isEqualTo(expectedRow + "\n" + expectedRow + "\n");
+    }
+
     @Test
     void render_wrappedWordWiderThanWidthFollowedByText_wrapsAgain() {
         // "BBBB" moves to a new band but is still too wide on its own, so the

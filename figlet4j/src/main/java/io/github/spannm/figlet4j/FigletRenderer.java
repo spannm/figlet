@@ -31,6 +31,9 @@ import java.util.List;
  * Adjacent glyphs are moved together until they touch: the trailing spaces of
  * the left glyph and the leading spaces of the right glyph are both removed,
  * leaving exactly one space of padding between any two visible columns.
+ * Hardblanks (see {@link FigletFont#getHardblank()}) count as visible while
+ * fitting and are printed as spaces, which is what keeps the space character
+ * of most fonts from being fitted away.
  * Full smushing (merging compatible border characters) is not yet implemented.
  *
  * <h2>Print direction</h2>
@@ -256,7 +259,7 @@ public final class FigletRenderer {
      * @return a new, empty band
      */
     private Band newBand() {
-        return new Band(font.getHeight(), font.isRightToLeft());
+        return new Band(font.getHeight(), font.isRightToLeft(), font.getHardblank());
     }
 
     /**
@@ -541,16 +544,19 @@ public final class FigletRenderer {
 
         private final StringBuilder[] rows;
         private final boolean         mirrored;
+        private final char            hardblank;
         private char[][]              prevGlyph;
 
         /**
          * Creates an empty band.
          *
-         * @param height   number of font rows
-         * @param mirrored whether the band is built from mirrored glyphs
+         * @param height    number of font rows
+         * @param mirrored  whether the band is built from mirrored glyphs
+         * @param hardblank the font's hardblank, printed as a space
          */
-        Band(int height, boolean mirrored) {
+        Band(int height, boolean mirrored, char hardblank) {
             this.mirrored = mirrored;
+            this.hardblank = hardblank;
             rows = new StringBuilder[height];
             for (int r = 0; r < height; r++) {
                 rows[r] = new StringBuilder();
@@ -568,6 +574,7 @@ public final class FigletRenderer {
                 rows[r] = new StringBuilder(other.rows[r]);
             }
             mirrored = other.mirrored;
+            hardblank = other.hardblank;
             prevGlyph = other.prevGlyph;
         }
 
@@ -605,21 +612,34 @@ public final class FigletRenderer {
         }
 
         /**
-         * Returns the output lines of this band, without trailing spaces. A
-         * mirrored band is padded, mirrored back and stripped of its uniform
-         * leading whitespace, so that it starts flush at column zero.
+         * Returns the output lines of this band, with hardblanks printed as
+         * spaces and without trailing spaces.
          *
          * @return one line per font row
          */
         List<String> lines() {
-            List<String> lines = new ArrayList<>(rows.length);
+            List<String> lines = mirrored ? mirroredBack() : new ArrayList<>(rows.length);
             if (!mirrored) {
                 for (StringBuilder row : rows) {
-                    lines.add(row.substring(0, trimmedLength(row)));
+                    lines.add(row.toString());
                 }
-                return lines;
             }
+            for (int r = 0; r < lines.size(); r++) {
+                String printed = lines.get(r).replace(hardblank, ' ');
+                lines.set(r, printed.substring(0, trimmedLength(printed)));
+            }
+            return lines;
+        }
 
+        /**
+         * Returns the rows of this mirrored band padded, mirrored back and
+         * stripped of their uniform leading whitespace, so that they start
+         * flush at column zero.
+         *
+         * @return one row per font row, hardblanks not yet replaced
+         */
+        private List<String> mirroredBack() {
+            List<String> lines = new ArrayList<>(rows.length);
             int width = 0;
             for (StringBuilder row : rows) {
                 width = Math.max(width, row.length());
@@ -632,8 +652,7 @@ public final class FigletRenderer {
                 lines.add(line.toString());
             }
             for (int r = 0; r < lines.size(); r++) {
-                String line = lines.get(r);
-                lines.set(r, line.substring(Math.min(strip, trimmedLength(line)), trimmedLength(line)));
+                lines.set(r, lines.get(r).substring(strip));
             }
             return lines;
         }

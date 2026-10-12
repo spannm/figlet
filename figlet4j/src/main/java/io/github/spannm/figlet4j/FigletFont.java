@@ -112,15 +112,37 @@ public final class FigletFont {
         return comment;
     }
 
-    /** Returns the character definition for the given Unicode code point, or {@code null} if unsupported. */
+    /**
+     * Returns the character definition for the given Unicode code point, or {@code null} if unsupported.
+     * Hardblanks are returned as spaces.
+     */
     public char[][] getCharacter(int codepoint) {
         char[][] rows = characters.get(codepoint);
-        return rows == null ? null : deepCopy(rows);
+        return rows == null ? null : withoutHardblanks(rows);
+    }
+
+    /**
+     * Returns a copy of {@code rows} with every hardblank replaced by a space.
+     *
+     * @param rows glyph rows as stored in this font
+     * @return the copied glyph rows
+     */
+    private char[][] withoutHardblanks(char[][] rows) {
+        char[][] copy = deepCopy(rows);
+        for (char[] row : copy) {
+            for (int i = 0; i < row.length; i++) {
+                if (row[i] == hardblank) {
+                    row[i] = ' ';
+                }
+            }
+        }
+        return copy;
     }
 
     /**
      * Returns the internal glyph for the given code point without copying it,
-     * for read-only use by the renderer.
+     * for read-only use by the renderer. Unlike {@link #getCharacter(int)}, the
+     * glyph still contains the font's hardblanks.
      *
      * @param codepoint Unicode code point
      * @return the glyph rows, or an empty glyph if unsupported; must not be modified
@@ -134,11 +156,11 @@ public final class FigletFont {
         return characters.containsKey(codepoint);
     }
 
-    /** Returns the unmodifiable map of all defined characters (code point → rows). */
+    /** Returns the unmodifiable map of all defined characters (code point → rows), with hardblanks as spaces. */
     public Map<Integer, char[][]> getCharacters() {
         Map<Integer, char[][]> copy = new LinkedHashMap<>();
         for (Map.Entry<Integer, char[][]> entry : characters.entrySet()) {
-            copy.put(entry.getKey(), deepCopy(entry.getValue()));
+            copy.put(entry.getKey(), withoutHardblanks(entry.getValue()));
         }
         return unmodifiableMap(copy);
     }

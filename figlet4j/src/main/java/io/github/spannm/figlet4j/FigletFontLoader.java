@@ -233,7 +233,7 @@ public final class FigletFontLoader {
             if (pos >= lines.size()) {
                 break; // truncated font - be lenient, stop early
             }
-            char[][] glyph = readGlyph(lines, pos, height, hardblank, endMarker, fontName, cp);
+            char[][] glyph = readGlyph(lines, pos, height, endMarker, fontName, cp);
             characters.put(cp, glyph);
             pos += height;
         }
@@ -254,7 +254,7 @@ public final class FigletFontLoader {
             if (pos + height > lines.size()) {
                 break;
             }
-            char[][] glyph = readGlyph(lines, pos, height, hardblank, endMarker, fontName, cp);
+            char[][] glyph = readGlyph(lines, pos, height, endMarker, fontName, cp);
             characters.put(cp, glyph);
             pos += height;
         }
@@ -310,15 +310,15 @@ public final class FigletFontLoader {
      * @param lines      all lines of the font file
      * @param pos        index of the first row of this glyph
      * @param height     number of rows per glyph
-     * @param hardblank  the font's hardblank character, replaced with a real space
      * @param endMarker  the detected end-of-row / end-of-character marker character
      * @param fontName   font name, used for error messages
      * @param cp         the code point being read, used for error messages
-     * @return the glyph's rows, with end-markers stripped and hardblanks replaced
+     * @return the glyph's rows, with end-markers stripped; hardblanks are kept, since
+     *         the renderer must tell them apart from blanks when fitting glyphs
      * @throws FigletException if the file ends before {@code height} rows could be read
      */
     private static char[][] readGlyph(List<String> lines, int pos, int height,
-                                       char hardblank, char endMarker, String fontName, int cp) {
+                                       char endMarker, String fontName, int cp) {
         char[][] rows = new char[height][];
         for (int row = 0; row < height; row++) {
             if (pos + row >= lines.size()) {
@@ -335,9 +335,7 @@ public final class FigletFontLoader {
                 endAt--;
                 expectedMarkers--;
             }
-            String rowContent = line.substring(0, endAt);
-            // replace hardblank with actual space
-            rows[row] = rowContent.replace(hardblank, ' ').toCharArray();
+            rows[row] = line.substring(0, endAt).toCharArray();
         }
         return rows;
     }

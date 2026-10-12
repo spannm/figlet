@@ -136,6 +136,15 @@ final class FigletFontTest {
     }
 
     @Test
+    void getCharacter_glyphWithHardblanks_returnsSpaces() {
+        FigletFont font = new FigletFont("hb", '$', 1, 1, List.of(), Map.of((int) 'X', new char[][] {{'$', 'X', '$'}}));
+
+        assertThat(font.getCharacter('X')).isDeepEqualTo(new char[][] {{' ', 'X', ' '}});
+        assertThat(font.getCharacters().get((int) 'X')).isDeepEqualTo(new char[][] {{' ', 'X', ' '}});
+        assertThat(font.glyph('X')).isDeepEqualTo(new char[][] {{'$', 'X', '$'}});
+    }
+
+    @Test
     void toString_shouldReturnFormattedString() {
         String expected = "FigletFont[name='standard', hardblank='$', height=2, baseline=1, rightToLeft=false, comment=2, characters=2]";
         assertThat(defaultFont).hasToString(expected);
