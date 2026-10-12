@@ -542,6 +542,21 @@ final class FigletRendererTest {
         assertThat(result).isEqualTo(expectedRow + "\n" + expectedRow + "\n");
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "A A | ' ##      ##'",
+        "AA  | ' ##  ##'",
+        "A   | ' ##'"
+    })
+    void render_fullWidthFont_placesGlyphsUnfitted(String text, String expectedRow) {
+        Map<Integer, char[][]> chars = Map.of((int) 'A', GLYPH_PADDED, (int) ' ', GLYPH_SPACE);
+        FigletFont font = new FigletFont("FullWidth", '$', 2, 1, List.of(), chars, false, true);
+
+        String result = new FigletRenderer(font).render(text);
+
+        assertThat(result).isEqualTo(expectedRow + "\n" + expectedRow + "\n");
+    }
+
     @Test
     void render_wrappedWordWiderThanWidthFollowedByText_wrapsAgain() {
         // "BBBB" moves to a new band but is still too wide on its own, so the
@@ -592,7 +607,7 @@ final class FigletRendererTest {
             (int) ' ', GLYPH_SPACE,
             (int) '?', GLYPH_NORMAL
         );
-        return new FigletFont("AsymmetricFont", '$', 2, 1, List.of(), chars, rightToLeft);
+        return new FigletFont("AsymmetricFont", '$', 2, 1, List.of(), chars, rightToLeft, false);
     }
 
 }

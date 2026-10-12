@@ -33,7 +33,9 @@ import java.util.List;
  * leaving exactly one space of padding between any two visible columns.
  * Hardblanks (see {@link FigletFont#getHardblank()}) count as visible while
  * fitting and are printed as spaces, which is what keeps the space character
- * of most fonts from being fitted away.
+ * of most fonts from being fitted away. Fonts whose header asks for full width
+ * (see {@link FigletFont#isFullWidth()}) are not fitted at all: their glyphs
+ * are placed next to each other unchanged.
  * Full smushing (merging compatible border characters) is not yet implemented.
  *
  * <h2>Print direction</h2>
@@ -259,7 +261,7 @@ public final class FigletRenderer {
      * @return a new, empty band
      */
     private Band newBand() {
-        return new Band(font.getHeight(), font.isRightToLeft(), font.getHardblank());
+        return new Band(font.getHeight(), font.isRightToLeft(), font.isFullWidth(), font.getHardblank());
     }
 
     /**
@@ -311,6 +313,24 @@ public final class FigletRenderer {
             char[] row = r < glyph.length ? glyph[r] : new char[0];
             int s = Math.min(skip, row.length);
             rows[r].append(row, s, row.length - s);
+        }
+    }
+
+    /**
+     * Appends {@code glyph} to {@code rows} without fitting, padding shorter
+     * glyph rows so that all rows stay aligned.
+     *
+     * @param glyph glyph row data
+     * @param rows  per-row output buffers
+     */
+    private static void appendUnfittedGlyph(char[][] glyph, StringBuilder[] rows) {
+        int width = 0;
+        for (char[] row : glyph) {
+            width = Math.max(width, row.length);
+        }
+        for (int r = 0; r < rows.length; r++) {
+            char[] row = r < glyph.length ? glyph[r] : new char[0];
+            rows[r].append(row).append(" ".repeat(width - row.length));
         }
     }
 
@@ -540,6 +560,7 @@ public final class FigletRenderer {
 
         private final StringBuilder[] rows;
         private final boolean         mirrored;
+        private final boolean         fullWidth;
         private final char            hardblank;
         private boolean               empty     = true;
 
@@ -548,10 +569,12 @@ public final class FigletRenderer {
          *
          * @param height    number of font rows
          * @param mirrored  whether the band is built from mirrored glyphs
+         * @param fullWidth whether glyphs are placed next to each other without fitting
          * @param hardblank the font's hardblank, printed as a space
          */
-        Band(int height, boolean mirrored, char hardblank) {
+        Band(int height, boolean mirrored, boolean fullWidth, char hardblank) {
             this.mirrored = mirrored;
+            this.fullWidth = fullWidth;
             this.hardblank = hardblank;
             rows = new StringBuilder[height];
             for (int r = 0; r < height; r++) {
@@ -570,6 +593,7 @@ public final class FigletRenderer {
                 rows[r] = new StringBuilder(other.rows[r]);
             }
             mirrored = other.mirrored;
+            fullWidth = other.fullWidth;
             hardblank = other.hardblank;
             empty = other.empty;
         }
@@ -577,7 +601,8 @@ public final class FigletRenderer {
         /**
          * Appends {@code glyph}, fitted against the content of this band.
          * The first glyph of a band is stripped of its uniform leading whitespace
-         * so that the output starts flush at column zero. Empty glyphs are skipped.
+         * so that the output starts flush at column zero. At full width, the
+         * glyph is appended unchanged instead. Empty glyphs are skipped.
          *
          * @param glyph glyph row data
          */
@@ -585,7 +610,10 @@ public final class FigletRenderer {
             if (glyph.length == 0) {
                 return;
             }
-            if (empty) {
+            if (fullWidth) {
+                appendUnfittedGlyph(glyph, rows);
+                empty = false;
+            } else if (empty) {
                 appendFirstGlyph(glyph, rows, rows.length);
                 empty = false;
             } else {

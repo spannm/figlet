@@ -61,6 +61,30 @@ final class FigletFontLoaderTest {
         assertThat(font.isRightToLeft()).isEqualTo(expected);
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "flf2a$ 1 1 10 -1 0,          true",
+        "flf2a$ 1 1 10 0 0,           false",
+        "flf2a$ 1 1 10 15 0,          false",
+        "flf2a$ 1 1 10 -1 0 0 64,     false",
+        "flf2a$ 1 1 10 15 0 0 24463,  false",
+        "flf2a$ 1 1 10 0 0 0 0,       true",
+        "flf2a$ 1 1 10 -1 0 0 x,      true"
+    })
+    void loadFromStream_layout_setsFullWidth(String header, boolean expected) {
+        String s = header + "\n" + " @\n".repeat(102);
+
+        FigletFont font = FigletFontLoader.loadFromStream("TestFont", new ByteArrayInputStream(s.getBytes(ISO_8859_1)));
+
+        assertThat(font.isFullWidth()).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"3x5, true", "gothic, true", "standard, false", "small, false"})
+    void loadBuiltin_fonts_haveExpectedLayout(String fontName, boolean fullWidth) {
+        assertThat(FigletFontLoader.loadBuiltin(fontName).isFullWidth()).isEqualTo(fullWidth);
+    }
+
     @Test
     void loadBuiltin_mirrorFont_isRightToLeft() {
         assertThat(FigletFontLoader.loadBuiltin("mirror").isRightToLeft()).isTrue();

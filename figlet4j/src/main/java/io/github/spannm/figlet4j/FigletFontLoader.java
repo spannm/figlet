@@ -198,6 +198,7 @@ public final class FigletFontLoader {
 
         // print_direction is optional: 0 = left-to-right, 1 = right-to-left
         boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
+        boolean fullWidth = isFullWidth(parts);
 
         if (height <= 0) {
             throw new FigletException(String.format(
@@ -260,7 +261,7 @@ public final class FigletFontLoader {
         }
 
         LOGGER.log(Level.DEBUG, "Loaded font {0} with {1} characters", fontName, characters.size());
-        return new FigletFont(fontName, hardblank, height, baseline, comment, characters, rightToLeft);
+        return new FigletFont(fontName, hardblank, height, baseline, comment, characters, rightToLeft, fullWidth);
     }
 
     /**
@@ -338,6 +339,29 @@ public final class FigletFontLoader {
             rows[row] = line.substring(0, endAt).toCharArray();
         }
         return rows;
+    }
+
+    /**
+     * Determines from the header fields whether glyphs are laid out at full width.
+     * <p>
+     * The optional {@code full_layout} field takes precedence: full width means
+     * that neither horizontal fitting (64) nor horizontal smushing (128) is
+     * enabled. Without it, {@code old_layout} -1 means full width, 0 fitting
+     * and a positive value smushing. Fields that are not numeric are ignored,
+     * falling back to fitting.
+     *
+     * @param parts the header fields following the signature and hardblank
+     * @return {@code true} if glyphs are laid out at full width
+     */
+    private static boolean isFullWidth(String[] parts) {
+        if (parts.length > 6) {
+            try {
+                return (Integer.parseInt(parts[6]) & (64 | 128)) == 0;
+            } catch (NumberFormatException ex) {
+                LOGGER.log(Level.DEBUG, "Ignoring non-numeric full_layout {0}", parts[6]);
+            }
+        }
+        return "-1".equals(parts[3]);
     }
 
     private static int parseCodepoint(String tag) {

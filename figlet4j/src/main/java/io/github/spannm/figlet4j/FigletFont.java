@@ -41,17 +41,19 @@ public final class FigletFont {
     private final List<String>           comment;
     private final Map<Integer, char[][]> characters; // codepoint -> rows of chars
     private final boolean                rightToLeft;
+    private final boolean                fullWidth;
 
     FigletFont(String fontName, char hardblank, int height, int baseline,
                List<String> comment, Map<Integer, char[][]> characters) {
-        this(fontName, hardblank, height, baseline, comment, characters, false);
+        this(fontName, hardblank, height, baseline, comment, characters, false, false);
     }
 
     FigletFont(String fontName, char hardblank, int height, int baseline,
-               List<String> comment, Map<Integer, char[][]> characters, boolean rightToLeft) {
+               List<String> comment, Map<Integer, char[][]> characters, boolean rightToLeft, boolean fullWidth) {
 
         this.name = requireNonNull(fontName, "fontName");
         this.rightToLeft = rightToLeft;
+        this.fullWidth = fullWidth;
         this.hardblank = hardblank;
         this.height = height;
         this.baseline = baseline;
@@ -105,6 +107,18 @@ public final class FigletFont {
      */
     public boolean isRightToLeft() {
         return rightToLeft;
+    }
+
+    /**
+     * Returns whether this font is rendered at full width, i.e. without fitting
+     * glyphs together, as specified by the {@code full_layout} header field or,
+     * if that is absent, by {@code old_layout} being -1.
+     *
+     * @return {@code true} for full width, {@code false} if glyphs are fitted
+     * @since 1.0.1
+     */
+    public boolean isFullWidth() {
+        return fullWidth;
     }
 
     /** Returns normalized comment lines of this font. */
@@ -173,6 +187,7 @@ public final class FigletFont {
             .add("height=" + height)
             .add("baseline=" + baseline)
             .add("rightToLeft=" + rightToLeft)
+            .add("fullWidth=" + fullWidth)
             .add("comment=" + comment.size())
             .add("characters=" + characters.size())
             .toString();
