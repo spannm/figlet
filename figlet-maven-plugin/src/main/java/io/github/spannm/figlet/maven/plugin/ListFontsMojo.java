@@ -124,10 +124,16 @@ public class ListFontsMojo extends AbstractFigletMojo {
         for (String name : fontNames) {
             counter++;
             boolean ok = true;
+            List<String> variants = FigletFontRegistry.listSpellingVariants(name);
             if (parmMetadata) {
                 ok = printMetadata(counter, name);
-            } else {
+                if (!variants.isEmpty()) {
+                    getLog().info(String.format("  %-25s  %s", "", alsoHint(variants)));
+                }
+            } else if (variants.isEmpty()) {
                 getLog().info(String.format("  %3s. %s", counter, name));
+            } else {
+                getLog().info(String.format("  %3s. %s %s", counter, name, alsoHint(variants)));
             }
 
             if (parmPrintSample) {
@@ -148,6 +154,16 @@ public class ListFontsMojo extends AbstractFigletMojo {
             getLog().warn(String.format("%d of %d font(s) could not be fully processed — see warnings above for details.",
                 failureCount, fontNames.size()));
         }
+    }
+
+    /**
+     * Formats the hint on other spellings of a font name, e.g. {@code (also: Banner)}.
+     *
+     * @param variants the other spellings, not empty
+     * @return the hint text
+     */
+    private static String alsoHint(List<String> variants) {
+        return String.format("(also: %s)", String.join(", ", variants));
     }
 
     private boolean printMetadata(int counter, String name) {

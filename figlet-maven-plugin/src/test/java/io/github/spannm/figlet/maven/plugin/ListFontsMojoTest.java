@@ -66,6 +66,17 @@ final class ListFontsMojoTest extends AbstractFigletMojoTestBase {
     }
 
     @Test
+    void defaultRun_namesDifferingInCase_listedOnceWithHint() throws Exception {
+        mojo.execute();
+
+        assertThat(log.infoMessages)
+            .filteredOn(s -> s.matches("\\s+\\d+\\. [Bb]anner\\b.*"))
+            .singleElement()
+            .asString()
+            .endsWith(". banner (also: Banner)");
+    }
+
+    @Test
     void defaultRun_printsHints() throws Exception {
         mojo.execute();
 

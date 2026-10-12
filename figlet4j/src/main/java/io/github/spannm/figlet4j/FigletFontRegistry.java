@@ -16,6 +16,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -75,16 +76,46 @@ public final class FigletFontRegistry {
 
     /**
      * Returns all available font names — built-in fonts plus any externally
-     * registered fonts — sorted alphabetically (case-insensitive). Built-in
-     * fonts whose names differ only in case are listed separately.
+     * registered fonts — sorted alphabetically (case-insensitive). Names that
+     * differ only in case are listed once, spelled like the font they resolve
+     * to; see {@link #listSpellingVariants(String)} for the other spellings.
      *
      * @return unmodifiable sorted set of font names without extensions
      */
     public static NavigableSet<String> listAllFonts() {
-        NavigableSet<String> all = new TreeSet<>(String.CASE_INSENSITIVE_ORDER.thenComparing(Comparator.naturalOrder()));
-        all.addAll(FontHolder.EXACT.keySet());
+        NavigableSet<String> all = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        all.addAll(FontHolder.INSTANCE.keySet());
         all.addAll(EXTERNAL_FONTS.keySet());
         return unmodifiableNavigableSet(all);
+    }
+
+    /**
+     * Returns the names of other built-in fonts that differ from {@code fontName}
+     * only in case, e.g. {@code Banner} for {@code banner}. Each of them can be
+     * loaded by its exact spelling.
+     *
+     * @param fontName font name without extension
+     * @return unmodifiable list of the other spellings in discovery order, empty if there are none
+     * @throws NullPointerException if {@code fontName} is {@code null}
+     * @since 1.1.0
+     */
+    public static List<String> listSpellingVariants(String fontName) {
+        return spellingVariants(fontName, FontHolder.EXACT.keySet());
+    }
+
+    /**
+     * Returns the names in {@code names} that equal {@code fontName} ignoring case, except {@code fontName} itself.
+     *
+     * @param fontName font name without extension
+     * @param names    font names to search
+     * @return unmodifiable list of matching names in iteration order
+     * @throws NullPointerException if {@code fontName} is {@code null}
+     */
+    static List<String> spellingVariants(String fontName, Collection<String> names) {
+        requireNonNull(fontName, "fontName");
+        return names.stream()
+            .filter(n -> n.equalsIgnoreCase(fontName) && !n.equals(fontName))
+            .collect(Collectors.toUnmodifiableList());
     }
 
     /**

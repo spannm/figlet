@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -94,6 +95,28 @@ final class FigletFontRegistryTest {
     void listAllFonts_shouldContainAllBuiltinFonts() {
         assertThat(FigletFontRegistry.listAllFonts())
             .containsAll(FigletFontRegistry.getBuiltinFonts().keySet());
+    }
+
+    @Test
+    void listAllFonts_namesDifferingInCase_listedOnce() {
+        assertThat(FigletFontRegistry.listAllFonts())
+            .extracting(n -> n.toLowerCase(Locale.ROOT))
+            .doesNotHaveDuplicates();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "banner, Banner",
+        "Banner, banner",
+        "BANNER, banner|Banner",
+        "mono9,  ''",
+        "nope,   ''"
+    })
+    void spellingVariants_namesDifferingInCase_returnsOtherSpellings(String fontName, String expected) {
+        List<String> names = List.of("banner", "Banner", "mono9");
+
+        assertThat(FigletFontRegistry.spellingVariants(fontName, names))
+            .containsExactly(expected.isEmpty() ? new String[0] : expected.split("\\|"));
     }
 
     @Test
