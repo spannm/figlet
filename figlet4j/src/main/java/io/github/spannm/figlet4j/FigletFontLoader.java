@@ -306,39 +306,6 @@ public final class FigletFontLoader {
     }
 
     /**
-     * Determines the horizontal layout bits (see {@link FigletFont#layout()}) from the header fields.
-     * <p>
-     * The optional {@code full_layout} field takes precedence; only its
-     * horizontal bits are used. Without it, {@code old_layout} -1 means full
-     * width, 0 fitting, and a positive value smushing with the rules given by
-     * its bits. As in the original FIGlet, the hardblank rule (32) is not taken
-     * from {@code old_layout}, so a value of 32 means universal smushing.
-     * Fields that are not numeric are ignored, falling back to fitting.
-     *
-     * @param parts the header fields following the signature and hardblank
-     * @return the layout bits
-     */
-    private static int layout(String[] parts) {
-        if (parts.length > 6) {
-            try {
-                return Integer.parseInt(parts[6]) & 0xFF;
-            } catch (NumberFormatException ex) {
-                LOGGER.log(Level.DEBUG, "Ignoring non-numeric full_layout {0}", parts[6]);
-            }
-        }
-        try {
-            int oldLayout = Integer.parseInt(parts[3]);
-            if (oldLayout < 0) {
-                return 0;
-            }
-            return oldLayout == 0 ? FigletFont.LAYOUT_FITTING : (oldLayout & 31) | FigletFont.LAYOUT_SMUSHING;
-        } catch (NumberFormatException ex) {
-            LOGGER.log(Level.DEBUG, "Ignoring non-numeric old_layout {0}", parts[3]);
-            return FigletFont.LAYOUT_FITTING;
-        }
-    }
-
-    /**
      * Parses the code point at the start of a code tag line, in decimal,
      * octal (leading {@code 0}) or hexadecimal ({@code 0x}) notation.
      *
@@ -475,6 +442,39 @@ public final class FigletFontLoader {
             // print_direction is optional: 0 = left-to-right, 1 = right-to-left
             boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
             return new Header(line.charAt(magic.length()), height, baseline, commentLines, rightToLeft, layout(parts));
+        }
+
+        /**
+         * Determines the horizontal layout bits (see {@link FigletFont#layout()}) from the header fields.
+         * <p>
+         * The optional {@code full_layout} field takes precedence; only its
+         * horizontal bits are used. Without it, {@code old_layout} -1 means full
+         * width, 0 fitting, and a positive value smushing with the rules given by
+         * its bits. As in the original FIGlet, the hardblank rule (32) is not taken
+         * from {@code old_layout}, so a value of 32 means universal smushing.
+         * Fields that are not numeric are ignored, falling back to fitting.
+         *
+         * @param parts the header fields following the signature and hardblank
+         * @return the layout bits
+         */
+        private static int layout(String[] parts) {
+            if (parts.length > 6) {
+                try {
+                    return Integer.parseInt(parts[6]) & 0xFF;
+                } catch (NumberFormatException ex) {
+                    LOGGER.log(Level.DEBUG, "Ignoring non-numeric full_layout {0}", parts[6]);
+                }
+            }
+            try {
+                int oldLayout = Integer.parseInt(parts[3]);
+                if (oldLayout < 0) {
+                    return 0;
+                }
+                return oldLayout == 0 ? FigletFont.LAYOUT_FITTING : (oldLayout & 31) | FigletFont.LAYOUT_SMUSHING;
+            } catch (NumberFormatException ex) {
+                LOGGER.log(Level.DEBUG, "Ignoring non-numeric old_layout {0}", parts[3]);
+                return FigletFont.LAYOUT_FITTING;
+            }
         }
 
     }
