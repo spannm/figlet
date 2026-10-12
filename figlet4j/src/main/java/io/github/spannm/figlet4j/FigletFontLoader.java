@@ -40,8 +40,10 @@ import java.util.stream.Collectors;
  * {character rows for ASCII 32..126, then 196,214,220,228,246,252,223}
  * {optional tagged Unicode characters}
  * </pre>
- * Each character ends with a line whose last non-whitespace character is {@code @};
- * the final row of a character ends with {@code @@}.
+ * Every row of a character ends with an end mark, usually {@code @}, doubled on
+ * the last row of the character. As in the original FIGlet, the end mark is
+ * taken from each row itself: trailing whitespace is ignored, and every trailing
+ * repetition of the last character is stripped.
  *
  * @since 1.0.0
  */
@@ -218,13 +220,6 @@ public final class FigletFontLoader {
         List<String> rawComment = lines.subList(1, dataStart);
         List<String> comment = FigletFontCommentNormalizer.normalizeComment(fontName, rawComment);
 
-        // End marker detection:
-        // The FIGfont spec does not mandate '@' as the row end marker; each font
-        // may use a different character. The marker is defined implicitly as the
-        // last character of the last row of the first (space) glyph.
-        // We detect it here before reading any glyph data.
-        char endMarker = detectEndMarker(lines, dataStart, height, fontName);
-
         // character data
         Map<Integer, char[][]> characters = new LinkedHashMap<>();
         int pos = dataStart;
@@ -234,7 +229,7 @@ public final class FigletFontLoader {
             if (pos >= lines.size()) {
                 break; // truncated font - be lenient, stop early
             }
-            char[][] glyph = readGlyph(lines, pos, height, endMarker, fontName, cp);
+            char[][] glyph = readGlyph(lines, pos, height, fontName, cp);
             characters.put(cp, glyph);
             pos += height;
         }
@@ -255,7 +250,7 @@ public final class FigletFontLoader {
             if (pos + height > lines.size()) {
                 break;
             }
-            char[][] glyph = readGlyph(lines, pos, height, endMarker, fontName, cp);
+            char[][] glyph = readGlyph(lines, pos, height, fontName, cp);
             characters.put(cp, glyph);
             pos += height;
         }
@@ -265,53 +260,12 @@ public final class FigletFontLoader {
     }
 
     /**
-     * Detects the row end-marker character from the last row of the first glyph.
-     * Most fonts use {@code @}, but some (e.g. cosmic, computer) use a different char.
-     *
-     * @throws FigletException if the first character definition is missing or its
-     *                          last row is empty, so the marker cannot be reliably determined
-     */
-    private static char detectEndMarker(List<String> lines, int dataStart, int height, String name) {
-        int lastRowIndex = dataStart + height - 1;
-        if (lastRowIndex >= lines.size()) {
-            throw new FigletException(String.format(
-                "Font '%s': file too short to contain the first (space) character definition "
-                + "needed to detect the end-of-character marker (expected %d row(s) starting at line %d, "
-                + "but the file has only %d line(s))",
-                name, height, dataStart + 1, lines.size()));
-        }
-        String lastRow = lines.get(lastRowIndex);
-        if (lastRow.isEmpty()) {
-            throw new FigletException(String.format(
-                "Font '%s': cannot detect the end-of-character marker because the last row of the "
-                + "first character definition (line %d) is empty", name, lastRowIndex + 1));
-        }
-        return lastRow.charAt(lastRow.length() - 1);
-    }
-
-    /**
-     * Reads one glyph's rows starting at {@code pos}, stripping the trailing
-     * end-marker character(s) from each row.
-     * <p>
-     * Per the FIGfont convention, a row is expected to end in a single
-     * occurrence of {@code endMarker}, and the last row of a character in a
-     * double occurrence. However, this is <em>intentionally</em> enforced
-     * leniently: the loop below strips up to the expected number of trailing
-     * marker characters but does not fail if fewer are found. Several
-     * real-world, otherwise valid FIGfont files bundled with this project
-     * (e.g. {@code morse.flf}, {@code term.flf}, {@code binary.flf},
-     * {@code rot13.flf} — all {@code height=1} fonts whose single row is
-     * simultaneously the "last row" of the glyph — and {@code doh.flf}, whose
-     * {@code '@'} glyph switches to a single {@code '#'} terminator to avoid
-     * clashing with the glyph's own {@code '@'}-heavy artwork) only use a
-     * single trailing marker even where two would be expected. Rejecting
-     * these rows outright would make such fonts fail to load entirely, even
-     * though the content itself is unambiguous and renders correctly.
+     * Reads one glyph's rows starting at {@code pos}, stripping the end mark
+     * from each row (see {@link #stripEndMark(String)}).
      *
      * @param lines      all lines of the font file
      * @param pos        index of the first row of this glyph
      * @param height     number of rows per glyph
-     * @param endMarker  the detected end-of-row / end-of-character marker character
      * @param fontName   font name, used for error messages
      * @param cp         the code point being read, used for error messages
      * @return the glyph's rows, with end-markers stripped; hardblanks are kept, since
@@ -319,26 +273,51 @@ public final class FigletFontLoader {
      * @throws FigletException if the file ends before {@code height} rows could be read
      */
     private static char[][] readGlyph(List<String> lines, int pos, int height,
-                                       char endMarker, String fontName, int cp) {
+                                       String fontName, int cp) {
         char[][] rows = new char[height][];
         for (int row = 0; row < height; row++) {
             if (pos + row >= lines.size()) {
                 throw new FigletException(String.format(
                     "Font '%s': premature end of file while reading glyph for codepoint U+%04X", fontName, cp));
             }
-            String line = lines.get(pos + row);
-            // strip trailing end-markers (single marker = end-of-row, double = end-of-char);
-            // intentionally lenient — see method javadoc for why fewer markers than
-            // expected must not be treated as an error
-            int endAt = line.length();
-            int expectedMarkers = (row == height - 1) ? 2 : 1;
-            while (expectedMarkers > 0 && endAt > 0 && line.charAt(endAt - 1) == endMarker) {
-                endAt--;
-                expectedMarkers--;
-            }
-            rows[row] = line.substring(0, endAt).toCharArray();
+            rows[row] = stripEndMark(lines.get(pos + row)).toCharArray();
         }
         return rows;
+    }
+
+    /**
+     * Strips the end mark from a glyph row, as the original FIGlet does:
+     * trailing whitespace is ignored, the last remaining character is the end
+     * mark, and all of its trailing repetitions are removed. The end mark is
+     * thus determined per row, which also covers fonts that use a different
+     * end mark for some characters, or a single mark on the last row.
+     *
+     * @param line one row of a glyph as read from the font file
+     * @return the row content without end mark
+     */
+    static String stripEndMark(String line) {
+        int end = line.length();
+        while (end > 0 && isBlank(line.charAt(end - 1))) {
+            end--;
+        }
+        if (end > 0) {
+            char endMark = line.charAt(end - 1);
+            while (end > 0 && line.charAt(end - 1) == endMark) {
+                end--;
+            }
+        }
+        return line.substring(0, end);
+    }
+
+    /**
+     * Returns whether {@code ch} counts as whitespace after an end mark,
+     * matching the C {@code isspace} function for ASCII.
+     *
+     * @param ch a character
+     * @return {@code true} for space, tab, vertical tab and form feed
+     */
+    private static boolean isBlank(char ch) {
+        return ch == ' ' || ch == '\t' || ch == '\013' || ch == '\f';
     }
 
     /**

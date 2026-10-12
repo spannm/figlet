@@ -195,24 +195,35 @@ final class FigletFontLoaderTest {
     }
 
     @Test
-    void loadFromStream_emptyLastRowOfFirstGlyph_throwsFigletException() {
-        // First (space) glyph has height=2, but its second (last) row is an empty
-        // line -> the end-of-character marker cannot be reliably detected.
+    void loadFromStream_emptyLastRowOfFirstGlyph_loadsEmptyRow() {
+        // an empty row has no end mark to strip, as in FIGlet it is simply empty
         String s = "flf2a$ 2 1 10 0 0\n" + " @\n" + "\n";
 
-        InputStream is = new ByteArrayInputStream(s.getBytes(ISO_8859_1));
+        FigletFont font = FigletFontLoader.loadFromStream("EmptyMarkerRow", new ByteArrayInputStream(s.getBytes(ISO_8859_1)));
 
-        assertThatThrownBy(() -> FigletFontLoader.loadFromStream("EmptyMarkerRow", is))
-            .isInstanceOf(FigletException.class)
-            .hasMessageContaining("EmptyMarkerRow")
-            .hasMessageContaining("cannot detect the end-of-character marker")
-            .hasMessageContaining("empty");
+        assertThat(font.getCharacter(' ')).isDeepEqualTo(new char[][] {{' '}, {}});
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "' @'     | ' '",
+        "'ab@@'   | ab",
+        "'ab@@@'  | ab",
+        "'ab@ \t' | ab",
+        "'abT'    | ab",
+        "'abTT'   | ab",
+        "'a##'    | a",
+        "'##'     | ''",
+        "'   '    | ''",
+        "''       | ''"
+    })
+    void stripEndMark_variousRows_stripsTrailingRepetitionsOfLastCharacter(String line, String expected) {
+        assertThat(FigletFontLoader.stripEndMark(line)).isEqualTo(expected);
     }
 
     @Test
     void loadFromStream_fileTooShortForFirstGlyph_throwsFigletException() {
         // Header declares height=5, but only one row of the first glyph follows
-        // -> not enough lines exist to detect the end-of-character marker.
         String s = "flf2a$ 5 4 10 0 0\n @\n";
 
         InputStream is = new ByteArrayInputStream(s.getBytes(ISO_8859_1));
@@ -220,7 +231,7 @@ final class FigletFontLoaderTest {
         assertThatThrownBy(() -> FigletFontLoader.loadFromStream("TooShortForMarker", is))
             .isInstanceOf(FigletException.class)
             .hasMessageContaining("TooShortForMarker")
-            .hasMessageContaining("file too short");
+            .hasMessageContaining("premature end of file");
     }
 
     @Test
@@ -228,8 +239,7 @@ final class FigletFontLoaderTest {
         // Real-world fonts (e.g. morse.flf, term.flf, binary.flf, rot13.flf) use
         // height=1, where every row is simultaneously the "last row" of its glyph
         // and would formally be expected to end in a doubled marker. These fonts
-        // only use a single trailing marker instead. The loader must remain
-        // lenient here and load such fonts without throwing.
+        // only use a single trailing marker instead.
         String s = "flf2a$ 1 1 10 0 0\n" + " @\n".repeat(102);
 
         InputStream is = new ByteArrayInputStream(s.getBytes(ISO_8859_1));
@@ -266,7 +276,7 @@ final class FigletFontLoaderTest {
 
     @Test
     void loadFromStream_nonAtEndMarker_detectsAndStripsMarker() {
-        // Use '#' as the row end marker, detected from the last row of the first glyph
+        // Use '#' as the row end marker
         String s = "flf2a# 2 1 10 0 0\n" + "XX#\nXX##\n" + "XX#\nXX##\n".repeat(101);
         InputStream is = new ByteArrayInputStream(s.getBytes(ISO_8859_1));
         FigletFont font = FigletFontLoader.loadFromStream("HashMarkerFont", is);
