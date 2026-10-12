@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -16,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -191,6 +194,57 @@ final class FigletFontRegistryTest {
     }
 
     @Test
+    void scanPath_flfAndTlfOfSameName_prefersTlf(@TempDir Path tmp) throws IOException {
+        Files.writeString(tmp.resolve("mono9.flf"), buildMinimalFlf(1));
+        Files.writeString(tmp.resolve("mono9.tlf"), buildMinimalFlf(1));
+        Map<String, String> fonts = new LinkedHashMap<>();
+
+        FigletFontRegistry.scanPath(tmp, fonts);
+
+        assertThat(fonts).containsExactly(Map.entry("mono9", "fonts/mono9.tlf"));
+    }
+
+    @Test
+    void scanPath_nameAlreadyDiscovered_keepsFirst(@TempDir Path tmp) throws IOException {
+        Files.writeString(tmp.resolve("banner.flf"), buildMinimalFlf(1));
+        Map<String, String> fonts = new LinkedHashMap<>(Map.of("banner", "fonts/banner.tlf"));
+
+        FigletFontRegistry.scanPath(tmp, fonts);
+
+        assertThat(fonts).containsExactly(Map.entry("banner", "fonts/banner.tlf"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "banner, fonts/banner.flf",
+        "Banner, fonts/Banner.flf",
+        "BANNER, fonts/banner.flf",
+        "mono9,  fonts/mono9.tlf",
+        "nope,"
+    })
+    void resolve_namesDifferingInCase_prefersExactSpellingThenFirstDiscovered(String fontName, String expected) {
+        Map<String, String> exact = new LinkedHashMap<>();
+        exact.put("banner", "fonts/banner.flf");
+        exact.put("Banner", "fonts/Banner.flf");
+        exact.put("mono9", "fonts/mono9.tlf");
+
+        String result = FigletFontRegistry.resolve(fontName, exact, FigletFontRegistry.caseInsensitive(exact));
+
+        assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
+    void caseInsensitive_namesDifferingInCase_keepsFirstDiscovered() {
+        Map<String, String> exact = new LinkedHashMap<>();
+        exact.put("Banner", "fonts/Banner.flf");
+        exact.put("banner", "fonts/banner.flf");
+
+        assertThat(FigletFontRegistry.caseInsensitive(exact))
+            .hasSize(1)
+            .containsEntry("BANNER", "fonts/Banner.flf");
+    }
+
+    @Test
     void scanPath_withJarFileSystem_shouldCorrectlyExtractFonts(@TempDir Path tmp)
             throws Exception {
         Path jarFile = tmp.resolve("test-fonts.jar");
@@ -354,3 +408,4 @@ final class FigletFontRegistryTest {
     }
 
 }
+

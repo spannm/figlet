@@ -1,5 +1,6 @@
 package io.github.spannm.figlet4j;
 
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableNavigableMap;
 import static java.util.Collections.unmodifiableNavigableSet;
 import static java.util.Objects.requireNonNull;
@@ -15,7 +16,10 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -23,6 +27,7 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -34,6 +39,13 @@ import java.util.stream.Stream;
  * <p>
  * Additional fonts can be registered at runtime via
  * {@link #registerExternal(String, Path)}.
+ *
+ * <h2>Name collisions</h2>
+ * Font names are case-insensitive, yet several font files may share a name,
+ * e.g. {@code banner.flf} and {@code Banner.flf} in different font modules. A
+ * name spelled exactly like a font file resolves to that file; otherwise the
+ * font discovered first wins, in classpath order. Within one directory, a
+ * {@code .tlf} font is preferred over a {@code .flf} font of the same name.
  *
  * <h2>Thread safety</h2>
  * Built-in font discovery uses the <em>initialization-on-demand holder</em>
@@ -48,11 +60,12 @@ public final class FigletFontRegistry {
 
     private static final Logger            LOGGER          = System.getLogger(FigletFontRegistry.class.getName());
     private static final String            FONTS_DIR       = "fonts";
+    private static final String            EXTERNAL_PREFIX = "external:";
 
     /** Runtime-registered external fonts: lowercase name → file-system path */
     private static final Map<String, Path> EXTERNAL_FONTS = new ConcurrentHashMap<>();
 
-    /** Cache of already-loaded/parsed fonts: lowercase name → parsed font */
+    /** Cache of already-loaded/parsed fonts: resource path, or prefixed lowercase name of an external font → parsed font */
     private static final Map<String, FigletFont> FONT_CACHE = new ConcurrentHashMap<>();
 
     private FigletFontRegistry() {
@@ -62,13 +75,14 @@ public final class FigletFontRegistry {
 
     /**
      * Returns all available font names — built-in fonts plus any externally
-     * registered fonts — sorted alphabetically (case-insensitive).
+     * registered fonts — sorted alphabetically (case-insensitive). Built-in
+     * fonts whose names differ only in case are listed separately.
      *
      * @return unmodifiable sorted set of font names without extensions
      */
     public static NavigableSet<String> listAllFonts() {
-        NavigableSet<String> all = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        all.addAll(getBuiltinFonts().keySet());
+        NavigableSet<String> all = new TreeSet<>(String.CASE_INSENSITIVE_ORDER.thenComparing(Comparator.naturalOrder()));
+        all.addAll(FontHolder.EXACT.keySet());
         all.addAll(EXTERNAL_FONTS.keySet());
         return unmodifiableNavigableSet(all);
     }
@@ -78,7 +92,8 @@ public final class FigletFontRegistry {
      * case-insensitive font name to its case-sensitive classpath resource path.
      * <p>
      * The map is populated exactly once, on the first call to this method,
-     * using the initialization-on-demand holder pattern.
+     * using the initialization-on-demand holder pattern. If several font files
+     * share a name, the map holds the one discovered first (see the class Javadoc).
      *
      * @return unmodifiable case-insensitive map of built-in font names to resource paths
      */
@@ -87,11 +102,36 @@ public final class FigletFontRegistry {
     }
 
     /**
+     * Resolves a built-in font name to its classpath resource path, preferring
+     * a font file spelled exactly like {@code fontName}.
+     *
+     * @param fontName font name without extension
+     * @return the resource path, or {@code null} if there is no such built-in font
+     */
+    static String resolveBuiltin(String fontName) {
+        return resolve(fontName, FontHolder.EXACT, FontHolder.INSTANCE);
+    }
+
+    /**
+     * Looks up {@code fontName} in {@code exact} first, then in {@code caseInsensitive}.
+     *
+     * @param fontName        font name without extension
+     * @param exact           case-sensitive map of font names to resource paths
+     * @param caseInsensitive case-insensitive map of font names to resource paths
+     * @return the resource path, or {@code null} if neither map contains the name
+     */
+    static String resolve(String fontName, Map<String, String> exact, Map<String, String> caseInsensitive) {
+        String resourcePath = exact.get(fontName);
+        return resourcePath != null ? resourcePath : caseInsensitive.get(fontName);
+    }
+
+    /**
      * Loads and returns the {@link FigletFont} with the given name.
      * <p>
-     * Built-in fonts are tried first; externally registered fonts are consulted
-     * if no built-in font matches. Parsed fonts are cached by name, so repeated
-     * calls for the same font do not re-read or re-parse the underlying file.
+     * Built-in fonts are tried first, resolved as described in the class Javadoc;
+     * externally registered fonts are consulted if no built-in font matches.
+     * Parsed fonts are cached, so repeated calls for the same font do not
+     * re-read or re-parse the underlying file.
      *
      * @param fontName font name, case-insensitive, without extension
      * @return the loaded font; never {@code null}
@@ -100,18 +140,15 @@ public final class FigletFontRegistry {
      */
     public static FigletFont loadFont(String fontName) {
         requireNonNull(fontName, "fontName");
-        String key = fontName.toLowerCase(Locale.ROOT);
-        return FONT_CACHE.computeIfAbsent(key, k -> loadUncached(fontName));
-    }
-
-    private static FigletFont loadUncached(String fontName) {
-        String resourcePath = getBuiltinFonts().get(fontName);
+        String resourcePath = resolveBuiltin(fontName);
         if (resourcePath != null) {
-            return FigletFontLoader.loadBuiltin(fontName, resourcePath);
+            String fileName = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
+            return FONT_CACHE.computeIfAbsent(resourcePath,
+                p -> FigletFontLoader.loadBuiltin(FigletFontType.removeExtension(fileName), p));
         }
-        Path extPath = EXTERNAL_FONTS.get(fontName.toLowerCase(Locale.ROOT));
-        if (extPath != null) {
-            return FigletFontLoader.loadFromFile(extPath);
+        String key = fontName.toLowerCase(Locale.ROOT);
+        if (EXTERNAL_FONTS.containsKey(key)) {
+            return FONT_CACHE.computeIfAbsent(EXTERNAL_PREFIX + key, k -> FigletFontLoader.loadFromFile(EXTERNAL_FONTS.get(key)));
         }
         throw new FigletException(String.format("No font named '%s' found. "
             + "Use the list-fonts goal to list all available fonts.", fontName));
@@ -137,24 +174,56 @@ public final class FigletFontRegistry {
         LOGGER.log(Level.DEBUG, "Registering external font: {0} at {1}", fontName, path);
         String key = fontName.toLowerCase(Locale.ROOT);
         EXTERNAL_FONTS.put(key, path);
-        FONT_CACHE.remove(key);
+        FONT_CACHE.remove(EXTERNAL_PREFIX + key);
     }
 
+    /**
+     * Adds the font files directly in {@code path} to {@code fonts}, mapping each
+     * font name to its resource path. Names already in {@code fonts} are kept,
+     * and a {@code .tlf} font is added before a {@code .flf} font of the same name.
+     *
+     * @param path  the directory to scan; nothing is added if it does not exist
+     * @param fonts the map to add to
+     * @throws IOException if the directory cannot be read
+     */
     static void scanPath(Path path, Map<String, String> fonts) throws IOException {
         if (!Files.exists(path)) {
             return;
         }
+        List<String> fileNames;
         try (Stream<Path> walk = Files.walk(path, 1)) {
-            walk.filter(Files::isRegularFile)
-                .forEach(p -> {
-                    String fileName = p.getFileName().toString();
-                    if (FigletFontType.isSupported(fileName)) {
-                        String fontName = FigletFontType.removeExtension(fileName);
-                        String resourcePath = FONTS_DIR + "/" + fileName;
-                        fonts.put(fontName, resourcePath);
-                    }
-                });
+            fileNames = walk.filter(Files::isRegularFile)
+                .map(p -> p.getFileName().toString())
+                .filter(FigletFontType::isSupported)
+                .sorted(Comparator.comparing(FigletFontRegistry::isFigfont).thenComparing(Comparator.naturalOrder()))
+                .collect(Collectors.toList());
         }
+        for (String fileName : fileNames) {
+            fonts.putIfAbsent(FigletFontType.removeExtension(fileName), FONTS_DIR + "/" + fileName);
+        }
+    }
+
+    /**
+     * Returns whether {@code fileName} is a FIGlet font, i.e. not a TOIlet font.
+     *
+     * @param fileName a font file name
+     * @return {@code true} for a {@code .flf} file
+     */
+    private static boolean isFigfont(String fileName) {
+        return fileName.toLowerCase(Locale.ROOT).endsWith(FigletFontType.FIGFONT.getExtension());
+    }
+
+    /**
+     * Builds a case-insensitive map from {@code exact}, in which the first entry
+     * of names that differ only in case wins.
+     *
+     * @param exact case-sensitive map of font names to resource paths, in discovery order
+     * @return unmodifiable case-insensitive map
+     */
+    static NavigableMap<String, String> caseInsensitive(Map<String, String> exact) {
+        NavigableMap<String, String> fonts = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        exact.forEach(fonts::putIfAbsent);
+        return unmodifiableNavigableMap(fonts);
     }
 
     /**
@@ -228,7 +297,10 @@ public final class FigletFontRegistry {
      * synchronization.
      */
     static final class FontHolder {
-        static final Map<String, String> INSTANCE = discoverBuiltinFonts();
+        /** Built-in fonts by exact name, in discovery order. */
+        static final Map<String, String> EXACT    = discoverBuiltinFonts();
+        /** Built-in fonts by case-insensitive name; the font discovered first wins. */
+        static final Map<String, String> INSTANCE = caseInsensitive(EXACT);
 
         private FontHolder() {
             throw new UnsupportedOperationException(
@@ -239,10 +311,10 @@ public final class FigletFontRegistry {
          * Scans the classpath for the {@code /fonts} directory and discovers all
          * available {@code .flf} and {@code .tlf} font files.
          *
-         * @return unmodifiable map of case-insensitive font names to case-sensitive resource paths
+         * @return unmodifiable map of font names to resource paths, in discovery order
          */
-        private static NavigableMap<String, String> discoverBuiltinFonts() {
-            NavigableMap<String, String> fonts = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        private static Map<String, String> discoverBuiltinFonts() {
+            Map<String, String> fonts = new LinkedHashMap<>();
             ClassLoader cl = FigletFontRegistry.class.getClassLoader();
 
             try {
@@ -269,7 +341,7 @@ public final class FigletFontRegistry {
             }
 
             LOGGER.log(Level.DEBUG, "Discovered {0} built-in fonts", fonts.size());
-            return unmodifiableNavigableMap(fonts);
+            return unmodifiableMap(fonts);
         }
 
     }

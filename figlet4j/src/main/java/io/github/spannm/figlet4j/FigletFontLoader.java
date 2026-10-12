@@ -87,7 +87,7 @@ public final class FigletFontLoader {
      */
     public static FigletFont loadBuiltin(String fontName) {
         requireNonNull(fontName, "fontName");
-        String resourcePath = FigletFontRegistry.getBuiltinFonts().get(fontName);
+        String resourcePath = FigletFontRegistry.resolveBuiltin(fontName);
         if (resourcePath != null) {
             return loadBuiltin(fontName, resourcePath);
         }
