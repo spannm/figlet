@@ -160,103 +160,88 @@ public final class FigletFontLoader {
         return parse(fontName, is);
     }
 
-    @SuppressWarnings("StringSplitter")
+    /**
+     * Parses a FIGfont or TOIlet font from {@code is}.
+     *
+     * @param fontName font name, used for the font and in error messages
+     * @param is       input stream of the font content
+     * @return the parsed font
+     * @throws FigletException if the content is not a valid font
+     */
     private static FigletFont parse(String fontName, InputStream is) {
         List<String> lines = readLines(is);
         if (lines.isEmpty()) {
             throw new FigletException(String.format("Font file is empty: %s", fontName));
         }
+        Header header = Header.parse(lines.get(0), fontName);
 
-        // header
-        String header = lines.get(0);
-        String magic;
-        if (header.startsWith(MAGIC_FLF)) {
-            magic = MAGIC_FLF;
-        } else if (header.startsWith(MAGIC_TLF)) {
-            magic = MAGIC_TLF;
-        } else {
-            throw new FigletException(String.format("Not a valid FIGfont or TOIlet font (missing signature): %s", fontName));
-        }
-
-        if (header.length() <= magic.length()) {
-            throw new FigletException(String.format("Malformed font header (missing hardblank character) in font: %s", fontName));
-        }
-        char hardblank = header.charAt(magic.length());
-        String[] parts = header.substring(magic.length() + 1).trim().split("\\s+");
-        if (parts.length < 5) {
-            throw new FigletException(String.format("Malformed font header in font: %s", fontName));
-        }
-
-        int height;
-        int baseline;
-        int commentLines;
-        try {
-            height = Integer.parseInt(parts[0]);
-            baseline = Integer.parseInt(parts[1]);
-            commentLines = Integer.parseInt(parts[4]);
-        } catch (NumberFormatException ex) {
-            throw new FigletException(String.format("Malformed font header (non-numeric field) in font: %s", fontName), ex);
-        }
-
-        // print_direction is optional: 0 = left-to-right, 1 = right-to-left
-        boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
-        int layout = layout(parts);
-
-        if (height <= 0) {
-            throw new FigletException(String.format(
-                "Malformed font header (height must be a positive number, was %d) in font: %s", height, fontName));
-        }
-        if (commentLines < 0) {
-            throw new FigletException(String.format(
-                "Malformed font header (comment_lines must not be negative, was %d) in font: %s", commentLines, fontName));
-        }
-
-        // comment block
-        int dataStart = 1 + commentLines;
+        int dataStart = 1 + header.commentLines;
         if (dataStart > lines.size()) {
             throw new FigletException(String.format("Font file too short to contain comment block: %s", fontName));
         }
+        List<String> comment = FigletFontCommentNormalizer.normalizeComment(fontName, lines.subList(1, dataStart));
 
-        List<String> rawComment = lines.subList(1, dataStart);
-        List<String> comment = FigletFontCommentNormalizer.normalizeComment(fontName, rawComment);
-
-        // character data
         Map<Integer, char[][]> characters = new LinkedHashMap<>();
-        int pos = dataStart;
-
-        // required characters in fixed order: ASCII 32-126, then Deutsch extras
-        for (int cp : REQUIRED_CODEPOINTS) {
-            if (pos >= lines.size()) {
-                break; // truncated font - be lenient, stop early
-            }
-            char[][] glyph = readGlyph(lines, pos, height, fontName, cp);
-            characters.put(cp, glyph);
-            pos += height;
-        }
-
-        // optional tagged Unicode characters: lines of the form "NNN  comment"
-        while (pos < lines.size()) {
-            String tag = lines.get(pos).trim();
-            if (tag.isEmpty()) {
-                pos++;
-                continue;
-            }
-            int cp = parseCodepoint(tag);
-            if (cp < 0) {
-                pos++;
-                continue;
-            }
-            pos++;
-            if (pos + height > lines.size()) {
-                break;
-            }
-            char[][] glyph = readGlyph(lines, pos, height, fontName, cp);
-            characters.put(cp, glyph);
-            pos += height;
-        }
+        int pos = readRequiredCharacters(lines, dataStart, header.height, fontName, characters);
+        readTaggedCharacters(lines, pos, header.height, fontName, characters);
 
         LOGGER.log(Level.DEBUG, "Loaded font {0} with {1} characters", fontName, characters.size());
-        return new FigletFont(fontName, hardblank, height, baseline, comment, characters, rightToLeft, layout);
+        return new FigletFont(fontName, header.hardblank, header.height, header.baseline, comment, characters,
+            header.rightToLeft, header.layout);
+    }
+
+    /**
+     * Reads the required characters, which follow the comment block in fixed
+     * order: ASCII 32-126, then the Deutsch characters. A truncated font is
+     * accepted, reading stops at the end of the file.
+     *
+     * @param lines      all lines of the font file
+     * @param pos        index of the first row of the first character
+     * @param height     number of rows per glyph
+     * @param fontName   font name, used for error messages
+     * @param characters the map to add the characters to
+     * @return index of the line following the required characters
+     */
+    private static int readRequiredCharacters(List<String> lines, int pos, int height, String fontName,
+                                              Map<Integer, char[][]> characters) {
+        int next = pos;
+        for (int cp : REQUIRED_CODEPOINTS) {
+            if (next >= lines.size()) {
+                break;
+            }
+            characters.put(cp, readGlyph(lines, next, height, fontName, cp));
+            next += height;
+        }
+        return next;
+    }
+
+    /**
+     * Reads the optional tagged characters: each starts with a line holding its
+     * code point and an optional comment, followed by its rows. Lines that are
+     * not a valid code tag are skipped, and a character truncated by the end of
+     * the file is ignored.
+     *
+     * @param lines      all lines of the font file
+     * @param pos        index of the first line after the required characters
+     * @param height     number of rows per glyph
+     * @param fontName   font name, used for error messages
+     * @param characters the map to add the characters to
+     */
+    private static void readTaggedCharacters(List<String> lines, int pos, int height, String fontName,
+                                             Map<Integer, char[][]> characters) {
+        int next = pos;
+        while (next < lines.size()) {
+            int cp = parseCodepoint(lines.get(next).trim());
+            next++;
+            if (cp < 0) {
+                continue;
+            }
+            if (next + height > lines.size()) {
+                return;
+            }
+            characters.put(cp, readGlyph(lines, next, height, fontName, cp));
+            next += height;
+        }
     }
 
     /**
@@ -353,6 +338,13 @@ public final class FigletFontLoader {
         }
     }
 
+    /**
+     * Parses the code point at the start of a code tag line, in decimal,
+     * octal (leading {@code 0}) or hexadecimal ({@code 0x}) notation.
+     *
+     * @param tag the trimmed code tag line
+     * @return the code point, or -1 if the line does not start with a number
+     */
     private static int parseCodepoint(String tag) {
         String[] parts = tag.split("\\s+", 2);
         String cpStr = parts[0];
@@ -404,4 +396,88 @@ public final class FigletFontLoader {
         }
     }
 
+    /**
+     * The fields of a font's header line that the loader needs.
+     */
+    private static final class Header {
+
+        private final char    hardblank;
+        private final int     height;
+        private final int     baseline;
+        private final int     commentLines;
+        private final boolean rightToLeft;
+        private final int     layout;
+
+        /**
+         * Creates a header from its parsed fields.
+         *
+         * @param hardblank    the hardblank character
+         * @param height       number of rows per glyph
+         * @param baseline     baseline row
+         * @param commentLines number of comment lines following the header
+         * @param rightToLeft  whether the print direction is right-to-left
+         * @param layout       the horizontal layout bits
+         */
+        private Header(char hardblank, int height, int baseline, int commentLines, boolean rightToLeft, int layout) {
+            this.hardblank = hardblank;
+            this.height = height;
+            this.baseline = baseline;
+            this.commentLines = commentLines;
+            this.rightToLeft = rightToLeft;
+            this.layout = layout;
+        }
+
+        /**
+         * Parses the header line of a font.
+         *
+         * @param line     the first line of the font file
+         * @param fontName font name, used for error messages
+         * @return the parsed header
+         * @throws FigletException if the header is missing or malformed
+         */
+        @SuppressWarnings("StringSplitter")
+        static Header parse(String line, String fontName) {
+            String magic;
+            if (line.startsWith(MAGIC_FLF)) {
+                magic = MAGIC_FLF;
+            } else if (line.startsWith(MAGIC_TLF)) {
+                magic = MAGIC_TLF;
+            } else {
+                throw new FigletException(String.format("Not a valid FIGfont or TOIlet font (missing signature): %s", fontName));
+            }
+            if (line.length() <= magic.length()) {
+                throw new FigletException(String.format("Malformed font header (missing hardblank character) in font: %s", fontName));
+            }
+            String[] parts = line.substring(magic.length() + 1).trim().split("\\s+");
+            if (parts.length < 5) {
+                throw new FigletException(String.format("Malformed font header in font: %s", fontName));
+            }
+
+            int height;
+            int baseline;
+            int commentLines;
+            try {
+                height = Integer.parseInt(parts[0]);
+                baseline = Integer.parseInt(parts[1]);
+                commentLines = Integer.parseInt(parts[4]);
+            } catch (NumberFormatException ex) {
+                throw new FigletException(String.format("Malformed font header (non-numeric field) in font: %s", fontName), ex);
+            }
+            if (height <= 0) {
+                throw new FigletException(String.format(
+                    "Malformed font header (height must be a positive number, was %d) in font: %s", height, fontName));
+            }
+            if (commentLines < 0) {
+                throw new FigletException(String.format(
+                    "Malformed font header (comment_lines must not be negative, was %d) in font: %s", commentLines, fontName));
+            }
+
+            // print_direction is optional: 0 = left-to-right, 1 = right-to-left
+            boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
+            return new Header(line.charAt(magic.length()), height, baseline, commentLines, rightToLeft, layout(parts));
+        }
+
+    }
+
 }
+

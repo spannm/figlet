@@ -45,10 +45,13 @@ import java.util.stream.Collectors;
 public final class FigletMarkupParser {
 
     private static final Pattern TOKEN_PATTERN = Pattern.compile(
-        "<figletFont(?:\\s+name=\"([^\"]*)\")?\\s*>(.*?)</figletFont>"
+        "<figletFont(\\s[^>]*)?>(.*?)</figletFont>"
         + "|<lineBreak\\s*/>"
         + "|<preserveWhitespace\\s*>(.*?)</preserveWhitespace>",
         Pattern.DOTALL);
+
+    /** Matches the attribute part of a {@code <figletFont>} tag that names a font. */
+    private static final Pattern NAME_ATTRIBUTE = Pattern.compile("\\s*name=\"([^\"]*)\"\\s*");
 
     /**
      * Matches any leftover fragment that looks like an attempt at one of the
@@ -92,19 +95,7 @@ public final class FigletMarkupParser {
                 addTrimmedText(nodes, markup.substring(lastEnd, matcher.start()));
             }
 
-            String fontText = matcher.group(2);
-            String preserved = matcher.group(3);
-            if (fontText != null) {
-                String fontName = matcher.group(1);
-                nodes.add(fontName == null ? FigletMarkupNode.font(fontText) : FigletMarkupNode.font(fontName, fontText));
-            } else if (preserved != null) {
-                if (!preserved.isEmpty()) {
-                    nodes.add(FigletMarkupNode.text(preserved));
-                }
-            } else {
-                nodes.add(FigletMarkupNode.lineBreak());
-            }
-
+            addTag(nodes, matcher, markup);
             lastEnd = matcher.end();
         }
 
@@ -113,6 +104,49 @@ public final class FigletMarkupParser {
         }
 
         return List.copyOf(nodes);
+    }
+
+    /**
+     * Appends the node for the tag {@code matcher} has just found. An empty
+     * {@code <preserveWhitespace>} tag adds no node.
+     *
+     * @param nodes   the nodes parsed so far
+     * @param matcher a {@link #TOKEN_PATTERN} matcher positioned on a tag
+     * @param markup  the raw markup source, used for error messages
+     * @throws FigletException if a {@code <figletFont>} tag has malformed attributes
+     */
+    private static void addTag(List<FigletMarkupNode> nodes, Matcher matcher, String markup) {
+        String fontText = matcher.group(2);
+        String preserved = matcher.group(3);
+        if (fontText != null) {
+            nodes.add(fontNode(matcher.group(1), fontText, markup, matcher.start()));
+        } else if (preserved == null) {
+            nodes.add(FigletMarkupNode.lineBreak());
+        } else if (!preserved.isEmpty()) {
+            nodes.add(FigletMarkupNode.text(preserved));
+        }
+    }
+
+    /**
+     * Creates the node for a {@code <figletFont>} tag: with the named font, or
+     * with the default font if the tag has no attributes.
+     *
+     * @param attributes the attribute part of the tag; may be {@code null}
+     * @param text       the text enclosed by the tag
+     * @param markup     the raw markup source, used for error messages
+     * @param index      position of the tag in {@code markup}
+     * @return the font node
+     * @throws FigletException if the attributes are anything but a quoted {@code name}
+     */
+    private static FigletMarkupNode fontNode(String attributes, String text, String markup, int index) {
+        if (attributes == null || attributes.isBlank()) {
+            return FigletMarkupNode.font(text);
+        }
+        Matcher name = NAME_ATTRIBUTE.matcher(attributes);
+        if (!name.matches()) {
+            throw malformedMarkup("<figletFont", markup, index);
+        }
+        return FigletMarkupNode.font(name.group(1), text);
     }
 
     /**
@@ -158,14 +192,26 @@ public final class FigletMarkupParser {
     private static void checkForSuspiciousFragment(String text) {
         Matcher suspicious = SUSPICIOUS_PATTERN.matcher(text);
         if (suspicious.find()) {
-            throw new FigletException(String.format(
-                "Malformed figlet markup: found '%s' that is not part of a valid "
-                + "<figletFont [name=\"...\"]>...</figletFont>, <lineBreak/>, or "
-                + "<preserveWhitespace>...</preserveWhitespace> tag. "
-                + "Check for a missing closing tag or an unquoted 'name' attribute. "
-                + "Fragment: \"%s\"",
-                suspicious.group(), excerpt(text, suspicious.start())));
+            throw malformedMarkup(suspicious.group(), text, suspicious.start());
         }
+    }
+
+    /**
+     * Creates the exception for a fragment that is not part of a valid tag.
+     *
+     * @param found the offending fragment, e.g. {@code <figletFont}
+     * @param text  the text containing the fragment
+     * @param index position of the fragment in {@code text}
+     * @return the exception to throw
+     */
+    private static FigletException malformedMarkup(String found, String text, int index) {
+        return new FigletException(String.format(
+            "Malformed figlet markup: found '%s' that is not part of a valid "
+            + "<figletFont [name=\"...\"]>...</figletFont>, <lineBreak/>, or "
+            + "<preserveWhitespace>...</preserveWhitespace> tag. "
+            + "Check for a missing closing tag or an unquoted 'name' attribute. "
+            + "Fragment: \"%s\"",
+            found, excerpt(text, index)));
     }
 
     /** Returns a short, single-line excerpt around {@code index} for error messages. */
@@ -177,3 +223,4 @@ public final class FigletMarkupParser {
     }
 
 }
+

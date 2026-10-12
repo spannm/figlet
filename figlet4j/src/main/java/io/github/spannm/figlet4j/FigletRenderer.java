@@ -196,8 +196,7 @@ public final class FigletRenderer {
         }
         List<String> tokens = new ArrayList<>();
         StringBuilder word = new StringBuilder();
-        for (int i = 0; i < line.length();) {
-            int cp = line.codePointAt(i);
+        line.codePoints().forEach(cp -> {
             if (cp == ' ') {
                 if (word.length() > 0) {
                     tokens.add(word.toString());
@@ -207,8 +206,7 @@ public final class FigletRenderer {
             } else {
                 word.appendCodePoint(cp);
             }
-            i += Character.charCount(cp);
-        }
+        });
         if (word.length() > 0) {
             tokens.add(word.toString());
         }
@@ -352,30 +350,52 @@ public final class FigletRenderer {
         if ((layout & FigletFont.SMUSH_EQUAL) != 0 && left == right) {
             return left;
         }
+        char result = 0;
         if ((layout & FigletFont.SMUSH_LOWLINE) != 0) {
-            if (left == '_' && "|/\\[]{}()<>".indexOf(right) >= 0) {
-                return right;
-            } else if (right == '_' && "|/\\[]{}()<>".indexOf(left) >= 0) {
-                return left;
-            }
+            result = lowlineWinner(left, right);
         }
-        if ((layout & FigletFont.SMUSH_HIERARCHY) != 0) {
-            char winner = hierarchyWinner(left, right);
-            if (winner != 0) {
-                return winner;
-            }
+        if (result == 0 && (layout & FigletFont.SMUSH_HIERARCHY) != 0) {
+            result = hierarchyWinner(left, right);
         }
-        if ((layout & FigletFont.SMUSH_PAIR) != 0 && isOpposingPair(left, right)) {
+        if (result == 0 && (layout & FigletFont.SMUSH_PAIR) != 0 && isOpposingPair(left, right)) {
+            result = '|';
+        }
+        if (result == 0 && (layout & FigletFont.SMUSH_BIGX) != 0) {
+            result = bigX(left, right);
+        }
+        return result;
+    }
+
+    /**
+     * Applies the underscore rule: an underscore is replaced by a border character.
+     *
+     * @param left  the left character
+     * @param right the right character
+     * @return the border character, or 0 if the rule does not apply
+     */
+    private static char lowlineWinner(char left, char right) {
+        if (left == '_' && "|/\\[]{}()<>".indexOf(right) >= 0) {
+            return right;
+        } else if (right == '_' && "|/\\[]{}()<>".indexOf(left) >= 0) {
+            return left;
+        }
+        return 0;
+    }
+
+    /**
+     * Applies the big X rule: slashes form a vertical bar or a Y, angle brackets an X.
+     *
+     * @param left  the left character
+     * @param right the right character
+     * @return the merged character, or 0 if the rule does not apply
+     */
+    private static char bigX(char left, char right) {
+        if (left == '/' && right == '\\') {
             return '|';
-        }
-        if ((layout & FigletFont.SMUSH_BIGX) != 0) {
-            if (left == '/' && right == '\\') {
-                return '|';
-            } else if (left == '\\' && right == '/') {
-                return 'Y';
-            } else if (left == '>' && right == '<') {
-                return 'X';
-            }
+        } else if (left == '\\' && right == '/') {
+            return 'Y';
+        } else if (left == '>' && right == '<') {
+            return 'X';
         }
         return 0;
     }
@@ -427,19 +447,6 @@ public final class FigletRenderer {
     }
 
     /**
-     * Appends {@code glyph} to {@code rows} without fitting. As in the original
-     * FIGlet, rows are appended unchanged, even if a glyph's rows differ in length.
-     *
-     * @param glyph glyph row data
-     * @param rows  per-row output buffers
-     */
-    private static void appendUnfittedGlyph(char[][] glyph, StringBuilder[] rows) {
-        for (int r = 0; r < rows.length; r++) {
-            rows[r].append(r < glyph.length ? glyph[r] : new char[0]);
-        }
-    }
-
-    /**
      * Appends each output line of {@code band} followed by a newline to {@code out}.
      *
      * @param band the finished band
@@ -449,20 +456,6 @@ public final class FigletRenderer {
         for (String line : band.lines()) {
             out.append(line).append('\n');
         }
-    }
-
-    /**
-     * Returns the length of {@code row} with trailing space characters excluded.
-     *
-     * @param row a row buffer
-     * @return index one past the last non-space character; 0 if {@code row} is blank
-     */
-    private static int trimmedLength(CharSequence row) {
-        int end = row.length();
-        while (end > 0 && row.charAt(end - 1) == ' ') {
-            end--;
-        }
-        return end;
     }
 
     /**
@@ -587,11 +580,23 @@ public final class FigletRenderer {
                 return;
             }
             if ((layout & (FigletFont.LAYOUT_FITTING | FigletFont.LAYOUT_SMUSHING)) == 0) {
-                appendUnfittedGlyph(glyph, rows);
+                appendUnfittedGlyph(glyph);
             } else {
                 appendOverlappingGlyph(glyph);
             }
             prevWidth = glyph[0].length;
+        }
+
+        /**
+         * Appends {@code glyph} to this band without fitting. As in the original
+         * FIGlet, rows are appended unchanged, even if a glyph's rows differ in length.
+         *
+         * @param glyph glyph row data
+         */
+        private void appendUnfittedGlyph(char[][] glyph) {
+            for (int r = 0; r < rows.length; r++) {
+                rows[r].append(r < glyph.length ? glyph[r] : new char[0]);
+            }
         }
 
         /**
@@ -604,25 +609,28 @@ public final class FigletRenderer {
          */
         private void appendOverlappingGlyph(char[][] glyph) {
             int amount = overlapAmount(glyph);
-            int width  = glyph[0].length;
             for (int r = 0; r < rows.length; r++) {
-                StringBuilder row = rows[r];
-                char[] glyphRow = r < glyph.length ? glyph[r] : new char[0];
-                int keep = row.length() - amount;
-                String tail = row.substring(Math.max(0, keep));
-                row.setLength(Math.max(0, keep));
-                for (int k = 0; k < glyphRow.length; k++) {
-                    int pos = keep + k;
-                    if (pos < 0) {
-                        continue;
-                    }
-                    if (k < amount) {
-                        char merged = smushPair(tail.charAt(pos - Math.max(0, keep)), glyphRow[k], width);
-                        row.append(merged == 0 ? glyphRow[k] : merged);
-                    } else {
-                        row.append(glyphRow[k]);
-                    }
-                }
+                overlapRow(rows[r], r < glyph.length ? glyph[r] : new char[0], amount, glyph[0].length);
+            }
+        }
+
+        /**
+         * Appends one glyph row to a row of this band, overlapping its last
+         * {@code amount} columns. Glyph columns that would fall left of column
+         * zero are dropped.
+         *
+         * @param row        a row of this band
+         * @param glyphRow   the corresponding glyph row
+         * @param amount     number of overlapping columns
+         * @param glyphWidth width of the glyph being appended
+         */
+        private void overlapRow(StringBuilder row, char[] glyphRow, int amount, int glyphWidth) {
+            int keep = row.length() - amount;
+            String tail = row.substring(Math.max(0, keep));
+            row.setLength(Math.max(0, keep));
+            for (int k = Math.max(0, -keep); k < glyphRow.length; k++) {
+                char merged = k < amount ? smushPair(tail.charAt(k + Math.min(0, keep)), glyphRow[k], glyphWidth) : 0;
+                row.append(merged == 0 ? glyphRow[k] : merged);
             }
         }
 
@@ -713,6 +721,20 @@ public final class FigletRenderer {
                 lines.set(r, printed.substring(0, trimmedLength(printed)));
             }
             return lines;
+        }
+
+        /**
+         * Returns the length of {@code row} with trailing space characters excluded.
+         *
+         * @param row a row buffer
+         * @return index one past the last non-space character; 0 if {@code row} is blank
+         */
+        private static int trimmedLength(CharSequence row) {
+            int end = row.length();
+            while (end > 0 && row.charAt(end - 1) == ' ') {
+                end--;
+            }
+            return end;
         }
 
         /**
