@@ -3,6 +3,7 @@ package io.github.spannm.figlet4j;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -31,6 +32,12 @@ import java.util.List;
  * the left glyph and the leading spaces of the right glyph are both removed,
  * leaving exactly one space of padding between any two visible columns.
  * Full smushing (merging compatible border characters) is not yet implemented.
+ *
+ * <h2>Print direction</h2>
+ * Fonts whose header specifies {@code print_direction} 1 (see
+ * {@link FigletFont#isRightToLeft()}) are rendered right-to-left: the first
+ * character of each line appears rightmost. Word wrapping still fills lines
+ * in reading order. The output is not right-justified.
  *
  * <h2>Unsupported characters (fail-fast)</h2>
  * By default, any code point not present in the font causes a
@@ -224,23 +231,32 @@ public final class FigletRenderer {
         Band band = null;
 
         for (String token : words) {
-            Band candidate = band == null ? new Band(font.getHeight()) : new Band(band);
+            Band candidate = band == null ? newBand() : new Band(band);
             appendToken(candidate, token);
 
             if (band != null && candidate.width() > width) {
-                writeRows(band.rows, out);
+                writeRows(band, out);
                 band = null;
                 if (" ".equals(token)) {
                     continue; // discard leading space on wrapped line
                 }
-                candidate = new Band(font.getHeight());
+                candidate = newBand();
                 appendToken(candidate, token);
             }
             band = candidate;
         }
         if (band != null) {
-            writeRows(band.rows, out);
+            writeRows(band, out);
         }
+    }
+
+    /**
+     * Creates an empty band for this renderer's font, mirrored for right-to-left fonts.
+     *
+     * @return a new, empty band
+     */
+    private Band newBand() {
+        return new Band(font.getHeight(), font.isRightToLeft());
     }
 
     /**
@@ -250,7 +266,32 @@ public final class FigletRenderer {
      * @param token a word or space token
      */
     private void appendToken(Band band, String token) {
-        token.codePoints().forEach(cp -> band.append(resolveGlyph(cp)));
+        token.codePoints().forEach(cp -> {
+            char[][] glyph = resolveGlyph(cp);
+            band.append(band.mirrored ? mirror(glyph) : glyph);
+        });
+    }
+
+    /**
+     * Returns a horizontally mirrored copy of {@code glyph}, with shorter rows
+     * padded so that all rows stay aligned.
+     *
+     * @param glyph glyph row data
+     * @return the mirrored glyph
+     */
+    static char[][] mirror(char[][] glyph) {
+        int width = 0;
+        for (char[] row : glyph) {
+            width = Math.max(width, row.length);
+        }
+        char[][] mirrored = new char[glyph.length][width];
+        for (int r = 0; r < glyph.length; r++) {
+            Arrays.fill(mirrored[r], ' ');
+            for (int c = 0; c < glyph[r].length; c++) {
+                mirrored[r][width - 1 - c] = glyph[r][c];
+            }
+        }
+        return mirrored;
     }
 
     /**
@@ -341,15 +382,14 @@ public final class FigletRenderer {
     }
 
     /**
-     * Trims trailing spaces from each row buffer and appends each row followed
-     * by a newline to {@code out}.
+     * Appends each output line of {@code band} followed by a newline to {@code out}.
      *
-     * @param rows per-row output buffers
+     * @param band the finished band
      * @param out  output buffer to append to
      */
-    private static void writeRows(StringBuilder[] rows, StringBuilder out) {
-        for (StringBuilder row : rows) {
-            out.append(row, 0, trimmedLength(row)).append("\n");
+    private static void writeRows(Band band, StringBuilder out) {
+        for (String line : band.lines()) {
+            out.append(line).append('\n');
         }
     }
 
@@ -491,18 +531,26 @@ public final class FigletRenderer {
     /**
      * One horizontal band of fitted glyphs under construction: the per-row
      * buffers plus the last glyph appended, against which the next glyph is fitted.
+     * <p>
+     * A mirrored band is used for right-to-left fonts: it is built from mirrored
+     * glyphs with the regular left-to-right fitting, and mirrored back in
+     * {@link #lines()}. Since fitting is symmetric, this yields the glyphs in
+     * right-to-left order.
      */
     private static final class Band {
 
         private final StringBuilder[] rows;
+        private final boolean         mirrored;
         private char[][]              prevGlyph;
 
         /**
          * Creates an empty band.
          *
-         * @param height number of font rows
+         * @param height   number of font rows
+         * @param mirrored whether the band is built from mirrored glyphs
          */
-        Band(int height) {
+        Band(int height, boolean mirrored) {
+            this.mirrored = mirrored;
             rows = new StringBuilder[height];
             for (int r = 0; r < height; r++) {
                 rows[r] = new StringBuilder();
@@ -519,6 +567,7 @@ public final class FigletRenderer {
             for (int r = 0; r < rows.length; r++) {
                 rows[r] = new StringBuilder(other.rows[r]);
             }
+            mirrored = other.mirrored;
             prevGlyph = other.prevGlyph;
         }
 
@@ -542,17 +591,51 @@ public final class FigletRenderer {
         }
 
         /**
-         * Returns the real rendered width of this band, i.e. the widest row
-         * after trimming trailing spaces, the same measure {@link #writeRows} outputs.
+         * Returns the real rendered width of this band, i.e. the length of its
+         * longest output line.
          *
-         * @return widest trimmed row width in columns; 0 for a band with no visible content
+         * @return widest output line in columns; 0 for a band with no visible content
          */
         int width() {
             int max = 0;
-            for (StringBuilder row : rows) {
-                max = Math.max(max, trimmedLength(row));
+            for (String line : lines()) {
+                max = Math.max(max, line.length());
             }
             return max;
+        }
+
+        /**
+         * Returns the output lines of this band, without trailing spaces. A
+         * mirrored band is padded, mirrored back and stripped of its uniform
+         * leading whitespace, so that it starts flush at column zero.
+         *
+         * @return one line per font row
+         */
+        List<String> lines() {
+            List<String> lines = new ArrayList<>(rows.length);
+            if (!mirrored) {
+                for (StringBuilder row : rows) {
+                    lines.add(row.substring(0, trimmedLength(row)));
+                }
+                return lines;
+            }
+
+            int width = 0;
+            for (StringBuilder row : rows) {
+                width = Math.max(width, row.length());
+            }
+            int strip = width;
+            for (StringBuilder row : rows) {
+                StringBuilder line = new StringBuilder(row);
+                line.append(" ".repeat(width - row.length())).reverse();
+                strip = Math.min(strip, leadingSpaces(line.toString().toCharArray()));
+                lines.add(line.toString());
+            }
+            for (int r = 0; r < lines.size(); r++) {
+                String line = lines.get(r);
+                lines.set(r, line.substring(Math.min(strip, trimmedLength(line)), trimmedLength(line)));
+            }
+            return lines;
         }
 
     }

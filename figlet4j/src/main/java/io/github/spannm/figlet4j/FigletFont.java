@@ -40,11 +40,18 @@ public final class FigletFont {
     private final int                    baseline;
     private final List<String>           comment;
     private final Map<Integer, char[][]> characters; // codepoint -> rows of chars
+    private final boolean                rightToLeft;
 
     FigletFont(String fontName, char hardblank, int height, int baseline,
                List<String> comment, Map<Integer, char[][]> characters) {
+        this(fontName, hardblank, height, baseline, comment, characters, false);
+    }
+
+    FigletFont(String fontName, char hardblank, int height, int baseline,
+               List<String> comment, Map<Integer, char[][]> characters, boolean rightToLeft) {
 
         this.name = requireNonNull(fontName, "fontName");
+        this.rightToLeft = rightToLeft;
         this.hardblank = hardblank;
         this.height = height;
         this.baseline = baseline;
@@ -87,6 +94,17 @@ public final class FigletFont {
     /** Baseline row (0-based) within the character height. */
     public int getBaseline() {
         return baseline;
+    }
+
+    /**
+     * Returns whether this font is printed right-to-left, as specified by the
+     * optional {@code print_direction} header field.
+     *
+     * @return {@code true} if {@code print_direction} is 1, {@code false} for left-to-right
+     * @since 1.0.1
+     */
+    public boolean isRightToLeft() {
+        return rightToLeft;
     }
 
     /** Returns normalized comment lines of this font. */
@@ -132,6 +150,7 @@ public final class FigletFont {
             .add("hardblank='" + hardblank + "'")
             .add("height=" + height)
             .add("baseline=" + baseline)
+            .add("rightToLeft=" + rightToLeft)
             .add("comment=" + comment.size())
             .add("characters=" + characters.size())
             .toString();

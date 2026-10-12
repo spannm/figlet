@@ -481,6 +481,33 @@ final class FigletRendererTest {
         assertThat(newlines).isGreaterThanOrEqualTo(testFont.getHeight());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"A", "AB", "ABBA", "BAAB", "AABAB"})
+    void render_rightToLeftFont_equalsReversedTextLeftToRight(String text) {
+        // fitting two visible glyphs is symmetric, so right-to-left output equals the
+        // reversed text rendered left-to-right; blank glyphs are left out on purpose,
+        // since fitting after a blank glyph depends on the direction
+        String reversed = new StringBuilder(text).reverse().toString();
+
+        String result = new FigletRenderer(buildAsymmetricFont(true)).render(text);
+
+        assertThat(result).isEqualTo(new FigletRenderer(asymmetricFont).render(reversed));
+    }
+
+    @Test
+    void render_rightToLeftFontWithWrapping_keepsLinesInReadingOrder() {
+        String result = new FigletRenderer(buildAsymmetricFont(true)).withWidth(1).render("AB BB");
+
+        assertThat(result).isEqualTo(new FigletRenderer(asymmetricFont).withWidth(1).render("BA BB"));
+    }
+
+    @Test
+    void mirror_glyphWithUnevenRows_padsAndReversesRows() {
+        char[][] glyph = {{'a', 'b', 'c'}, {'d'}};
+
+        assertThat(FigletRenderer.mirror(glyph)).isDeepEqualTo(new char[][] {{'c', 'b', 'a'}, {' ', ' ', 'd'}});
+    }
+
     @Test
     void render_wrappedWordWiderThanWidthFollowedByText_wrapsAgain() {
         // "BBBB" moves to a new band but is still too wide on its own, so the
@@ -513,13 +540,20 @@ final class FigletRendererTest {
      * space (→ {@link #GLYPH_SPACE}), and '?' (→ {@link #GLYPH_NORMAL}).
      */
     private static FigletFont buildAsymmetricFont() {
+        return buildAsymmetricFont(false);
+    }
+
+    /**
+     * Builds the font described at {@link #buildAsymmetricFont()} with the given print direction.
+     */
+    private static FigletFont buildAsymmetricFont(boolean rightToLeft) {
         Map<Integer, char[][]> chars = Map.of(
             (int) 'A', GLYPH_A,
             (int) 'B', GLYPH_B,
             (int) ' ', GLYPH_SPACE,
             (int) '?', GLYPH_NORMAL
         );
-        return new FigletFont("AsymmetricFont", '$', 2, 1, List.of(), chars);
+        return new FigletFont("AsymmetricFont", '$', 2, 1, List.of(), chars, rightToLeft);
     }
 
 }

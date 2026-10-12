@@ -46,6 +46,26 @@ final class FigletFontLoaderTest {
             .satisfies(f -> assertThat(f.getComment()).hasSize(3));
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "flf2a$ 1 1 10 0 0,           false",
+        "flf2a$ 1 1 10 0 0 0,         false",
+        "flf2a$ 1 1 10 0 0 1,         true",
+        "flf2a$ 1 1 10 0 0 1 24463 0, true"
+    })
+    void loadFromStream_printDirection_setsRightToLeft(String header, boolean expected) {
+        String s = header + "\n" + " @\n".repeat(102);
+
+        FigletFont font = FigletFontLoader.loadFromStream("TestFont", new ByteArrayInputStream(s.getBytes(ISO_8859_1)));
+
+        assertThat(font.isRightToLeft()).isEqualTo(expected);
+    }
+
+    @Test
+    void loadBuiltin_mirrorFont_isRightToLeft() {
+        assertThat(FigletFontLoader.loadBuiltin("mirror").isRightToLeft()).isTrue();
+    }
+
     @Test
     void privateConstructor_throwsUnsupportedOperationException() throws NoSuchMethodException {
         Constructor<?> constructor = FigletFontLoader.class.getDeclaredConstructor();

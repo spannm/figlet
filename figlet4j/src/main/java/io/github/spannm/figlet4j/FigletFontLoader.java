@@ -196,6 +196,9 @@ public final class FigletFontLoader {
             throw new FigletException("Malformed font header (non-numeric field) in font: " + fontName, ex);
         }
 
+        // print_direction is optional: 0 = left-to-right, 1 = right-to-left
+        boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
+
         if (height <= 0) {
             throw new FigletException(
                 "Malformed font header (height must be a positive number, was " + height + ") in font: " + fontName);
@@ -257,7 +260,7 @@ public final class FigletFontLoader {
         }
 
         LOGGER.log(Level.DEBUG, "Loaded font {0} with {1} characters", fontName, characters.size());
-        return new FigletFont(fontName, hardblank, height, baseline, comment, characters);
+        return new FigletFont(fontName, hardblank, height, baseline, comment, characters, rightToLeft);
     }
 
     /**
