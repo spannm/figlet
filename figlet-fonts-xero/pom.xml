@@ -50,6 +50,68 @@
                 </includes>
             </resource>
         </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <!-- bound to initialize, so it runs after the validate-phase execution
+                         of the init-font-submodule profile below has fetched the fonts -->
+                    <execution>
+                        <id>require-font-submodule</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <phase>initialize</phase>
+                        <configuration>
+                            <rules>
+                                <requireFilesExist>
+                                    <files>
+                                        <file>${project.basedir}/src/main/resources/fonts/Standard.flf</file>
+                                    </files>
+                                    <message>The xero/figlet-fonts submodule is missing. Run: git submodule update --init --recursive</message>
+                                </requireFilesExist>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
+
+    <profiles>
+        <!-- The release plugin checks out the release tag without git submodules, which left
+             all but the patched fonts out of the release. Fetch the submodule whenever it is missing. -->
+        <profile>
+            <id>init-font-submodule</id>
+            <activation>
+                <file>
+                    <missing>${basedir}/src/main/resources/fonts/Standard.flf</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>init-font-submodule</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>validate</phase>
+                                <configuration>
+                                    <executable>git</executable>
+                                    <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+                                    <commandlineArgs>submodule update --init --recursive</commandlineArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
