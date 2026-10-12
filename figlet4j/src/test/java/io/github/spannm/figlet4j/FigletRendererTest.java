@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,12 @@ final class FigletRendererTest {
     private static final char[][] GLYPH_SPACE = {
         {' ', ' ', ' ', ' '},
         {' ', ' ', ' ', ' '}
+    };
+
+    /** Space glyph made of a blank and a hardblank, as most real fonts define it. */
+    private static final char[][] GLYPH_HARDBLANK_SPACE = {
+        {' ', '$'},
+        {' ', '$'}
     };
 
     /**
@@ -239,8 +246,8 @@ final class FigletRendererTest {
 
     @Test
     void render_wordWrapping_spaceTokenBetweenWordsBeyondWidth_shouldWrap() {
-        // width intentionally small to force wrapping between words
-        FigletRenderer renderer = new FigletRenderer(testFont).withWidth(5);
+        // width intentionally small to force wrapping between words: "A B" is 6 columns wide
+        FigletRenderer renderer = new FigletRenderer(buildUniformFont(GLYPH_NORMAL, GLYPH_HARDBLANK_SPACE)).withWidth(5);
         String result = renderer.render("A B");
         // Two words → at least 2 bands
         long newlines = result.chars().filter(c -> c == '\n').count();
@@ -250,12 +257,9 @@ final class FigletRendererTest {
     @Test
     void render_wordWrapping_shouldNeverExceedConfiguredWidth() {
         // Regression test: the wrap-width check must measure the real fitted
-        // width, not sum a per-glyph estimate. The fitting overlap between two
-        // glyphs can exceed either glyph's own width (here: GLYPH_NORMAL's 2
-        // trailing spaces + GLYPH_SPACE's fully blank 4-column row), which an
-        // additive per-glyph estimate cannot represent — it previously judged
-        // "A B" to fit within width 5 even though its real fitted width is 7.
-        FigletRenderer renderer = new FigletRenderer(testFont).withWidth(5);
+        // width, not sum a per-glyph estimate, which cannot represent the
+        // fitting overlap between glyphs. "A B" is 6 columns wide here.
+        FigletRenderer renderer = new FigletRenderer(buildUniformFont(GLYPH_NORMAL, GLYPH_HARDBLANK_SPACE)).withWidth(5);
         String result = renderer.render("A B");
         for (String line : result.split("\n", -1)) {
             assertThat(line.length())
@@ -277,14 +281,14 @@ final class FigletRendererTest {
     @Test
     void fittingOverlap_identicalGlyphs_shouldComputeCorrectOverlap() {
         // GLYPH_NORMAL: trailing=2, leading=0 → overlap = 2+0-1 = 1
-        int overlap = FigletRenderer.fittingOverlap(GLYPH_NORMAL, GLYPH_NORMAL);
+        int overlap = FigletRenderer.fittingOverlap(rows(GLYPH_NORMAL), GLYPH_NORMAL);
         assertThat(overlap).isEqualTo(1);
     }
 
     @Test
     void fittingOverlap_paddedGlyph_shouldComputeCorrectOverlap() {
         // left trailing=1, right leading=1 → 1+1-1 = 1
-        int overlap = FigletRenderer.fittingOverlap(GLYPH_PADDED, GLYPH_PADDED);
+        int overlap = FigletRenderer.fittingOverlap(rows(GLYPH_PADDED), GLYPH_PADDED);
         assertThat(overlap).isEqualTo(1);
     }
 
@@ -293,7 +297,7 @@ final class FigletRendererTest {
         // GLYPH_A row0: trailing=2, GLYPH_B row0: leading=2 → 2+2-1=3
         // GLYPH_A row1: trailing=3, GLYPH_B row1: leading=1 → 3+1-1=3
         // min(3,3) = 3
-        int overlap = FigletRenderer.fittingOverlap(GLYPH_A, GLYPH_B);
+        int overlap = FigletRenderer.fittingOverlap(rows(GLYPH_A), GLYPH_B);
         assertThat(overlap).isEqualTo(3);
     }
 
@@ -301,7 +305,7 @@ final class FigletRendererTest {
     void fittingOverlap_noWhitespace_shouldReturnZero() {
         // Glyphs with no trailing/leading spaces: overlap = 0+0-1 = -1 → clamped to 0
         char[][] solid = {{'#', '#'}, {'#', '#'}};
-        int overlap = FigletRenderer.fittingOverlap(solid, solid);
+        int overlap = FigletRenderer.fittingOverlap(rows(solid), solid);
         assertThat(overlap).isZero();
     }
 
@@ -310,7 +314,7 @@ final class FigletRendererTest {
         char[][] left  = {{'#', ' ', ' '}, {'#', '#', '#'}};  // trailing: 2, 0
         char[][] right = {{' ', ' ', '#'}, {' ', ' ', '#'}};  // leading:  2, 2
         // row0: 2+2-1=3, row1: 0+2-1=1 → min=1
-        int overlap = FigletRenderer.fittingOverlap(left, right);
+        int overlap = FigletRenderer.fittingOverlap(rows(left), right);
         assertThat(overlap).isEqualTo(1);
     }
 
@@ -325,7 +329,7 @@ final class FigletRendererTest {
         "'   '   | 3"
     })
     void trailingSpaces_variousInputs_shouldCountCorrectly(String input, int expected) {
-        assertThat(FigletRenderer.trailingSpaces(input.toCharArray())).isEqualTo(expected);
+        assertThat(FigletRenderer.trailingSpaces(input)).isEqualTo(expected);
     }
 
     @ParameterizedTest
@@ -468,7 +472,7 @@ final class FigletRendererTest {
     @Test
     void fittingOverlap_emptyGlyphRows_shouldReturnZero() {
         char[][] empty = new char[0][];
-        int overlap = FigletRenderer.fittingOverlap(empty, empty);
+        int overlap = FigletRenderer.fittingOverlap(rows(empty), empty);
         assertThat(overlap).isZero();
     }
 
@@ -510,6 +514,20 @@ final class FigletRendererTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
+        "B A | ' ## ##' | '##  #'",
+        "B B | ' ## ##' | '## ##'",
+        "A A | '## ##'  | '#  #'"
+    })
+    void render_blankGlyphBetweenWords_shiftsAllRowsEqually(String text, String row0, String row1) {
+        // the blank space glyph is fitted away; fitting the next glyph against the
+        // blank glyph instead of the rendered rows used to shift rows unequally
+        String result = new FigletRenderer(asymmetricFont).render(text);
+
+        assertThat(result).isEqualTo(row0 + "\n" + row1 + "\n");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
         "A A   | '##  ##'",
         "A  A  | '##    ##'",
         "A     | '##'",
@@ -517,7 +535,7 @@ final class FigletRendererTest {
     })
     void render_spaceGlyphWithHardblank_keepsSpaceVisible(String text, String expectedRow) {
         // hardblanks must not be fitted away, but are printed as spaces
-        FigletFont font = buildUniformFont(GLYPH_NORMAL, new char[][] {{' ', '$'}, {' ', '$'}});
+        FigletFont font = buildUniformFont(GLYPH_NORMAL, GLYPH_HARDBLANK_SPACE);
 
         String result = new FigletRenderer(font).render(text);
 
@@ -531,6 +549,11 @@ final class FigletRendererTest {
         String result = new FigletRenderer(testFont).withWidth(6).render("A BBBB C");
 
         assertThat(result).isEqualTo("##\n##\n## ## ## ##\n## ## ## ##\n##\n##\n");
+    }
+
+    /** Converts glyph rows to rendered rows, as passed to {@link FigletRenderer#fittingOverlap}. */
+    private static CharSequence[] rows(char[][] glyph) {
+        return Arrays.stream(glyph).map(String::new).toArray(CharSequence[]::new);
     }
 
     /**

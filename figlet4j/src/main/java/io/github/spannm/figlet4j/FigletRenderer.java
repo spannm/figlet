@@ -315,8 +315,8 @@ public final class FigletRenderer {
     }
 
     /**
-     * Appends a subsequent glyph to {@code rows} using fitting overlap against
-     * the previous glyph.
+     * Appends a subsequent glyph to {@code rows}, fitted against the content
+     * already in {@code rows}.
      * <p>
      * For each row:
      * <ol>
@@ -326,25 +326,20 @@ public final class FigletRenderer {
      *       remaining deficit.</li>
      *   <li>The remaining glyph row content is appended.</li>
      * </ol>
+     * Since the overlap is computed from the buffer itself, every row has
+     * enough spaces to collapse, so all rows are shifted by the same amount.
      *
-     * @param glyph     glyph row data to append
-     * @param prevGlyph the immediately preceding glyph (used to compute overlap)
-     * @param rows      per-row output buffers
-     * @param height    number of font rows
+     * @param glyph  glyph row data to append
+     * @param rows   per-row output buffers
+     * @param height number of font rows
      */
-    private static void appendFittedGlyph(char[][] glyph, char[][] prevGlyph,
-                                           StringBuilder[] rows, int height) {
-        int overlap = fittingOverlap(prevGlyph, glyph);
+    private static void appendFittedGlyph(char[][] glyph, StringBuilder[] rows, int height) {
+        int overlap = fittingOverlap(rows, glyph);
         for (int r = 0; r < height; r++) {
             char[] row = r < glyph.length ? glyph[r] : new char[0];
-
-            if (overlap > 0 && rows[r].length() >= overlap) {
-                int toRemove = removeTrailingSpaces(rows[r], overlap);
-                int skip     = skipLeadingSpaces(row, overlap - toRemove);
-                rows[r].append(row, skip, row.length - skip);
-            } else {
-                rows[r].append(row);
-            }
+            int removed = removeTrailingSpaces(rows[r], overlap);
+            int skip    = skipLeadingSpaces(row, overlap - removed);
+            rows[r].append(row, skip, row.length - skip);
         }
     }
 
@@ -411,21 +406,26 @@ public final class FigletRenderer {
     }
 
     /**
-     * Computes the fitting overlap between two adjacent glyphs.
+     * Computes the fitting overlap between the content rendered so far and the next glyph.
      * <p>
-     * Fitting moves glyphs together until their visible content is separated
-     * by exactly one space column. For each font row the candidate overlap is:
+     * Fitting moves the glyph towards the content until their visible columns
+     * are separated by exactly one space column. For each font row the candidate
+     * overlap is:
      * <pre>
      *   trailingSpaces(leftRow) + leadingSpaces(rightRow) - 1
      * </pre>
      * The {@code -1} preserves exactly one space of separation. The minimum
      * across all rows is used so that no row's visible content collides.
+     * <p>
+     * The left side must be the actual rendered rows rather than the previous
+     * glyph alone: a blank row of the previous glyph may itself have been
+     * partly collapsed, leaving fewer trailing spaces than the glyph defines.
      *
-     * @param left  glyph rows of the left character; must not be {@code null}
-     * @param right glyph rows of the right character; must not be {@code null}
+     * @param left  rows rendered so far; must not be {@code null}
+     * @param right glyph rows of the next character; must not be {@code null}
      * @return number of columns to collapse; always &gt;= 0
      */
-    static int fittingOverlap(char[][] left, char[][] right) {
+    static int fittingOverlap(CharSequence[] left, char[][] right) {
         int height = Math.min(left.length, right.length);
         int minOverlap = Integer.MAX_VALUE;
 
@@ -442,15 +442,11 @@ public final class FigletRenderer {
     /**
      * Returns the number of trailing space characters in {@code row}.
      *
-     * @param row character data of one glyph row
+     * @param row one rendered or glyph row
      * @return trailing space count; 0 if the row is empty or ends with a non-space
      */
-    static int trailingSpaces(char[] row) {
-        int count = 0;
-        for (int i = row.length - 1; i >= 0 && row[i] == ' '; i--) {
-            count++;
-        }
-        return count;
+    static int trailingSpaces(CharSequence row) {
+        return row.length() - trimmedLength(row);
     }
 
     /**
@@ -532,8 +528,8 @@ public final class FigletRenderer {
     }
 
     /**
-     * One horizontal band of fitted glyphs under construction: the per-row
-     * buffers plus the last glyph appended, against which the next glyph is fitted.
+     * One horizontal band of fitted glyphs under construction, held as per-row
+     * buffers against which the next glyph is fitted.
      * <p>
      * A mirrored band is used for right-to-left fonts: it is built from mirrored
      * glyphs with the regular left-to-right fitting, and mirrored back in
@@ -545,7 +541,7 @@ public final class FigletRenderer {
         private final StringBuilder[] rows;
         private final boolean         mirrored;
         private final char            hardblank;
-        private char[][]              prevGlyph;
+        private boolean               empty     = true;
 
         /**
          * Creates an empty band.
@@ -575,11 +571,11 @@ public final class FigletRenderer {
             }
             mirrored = other.mirrored;
             hardblank = other.hardblank;
-            prevGlyph = other.prevGlyph;
+            empty = other.empty;
         }
 
         /**
-         * Appends {@code glyph}, fitted against the previously appended glyph.
+         * Appends {@code glyph}, fitted against the content of this band.
          * The first glyph of a band is stripped of its uniform leading whitespace
          * so that the output starts flush at column zero. Empty glyphs are skipped.
          *
@@ -589,12 +585,12 @@ public final class FigletRenderer {
             if (glyph.length == 0) {
                 return;
             }
-            if (prevGlyph == null) {
+            if (empty) {
                 appendFirstGlyph(glyph, rows, rows.length);
+                empty = false;
             } else {
-                appendFittedGlyph(glyph, prevGlyph, rows, rows.length);
+                appendFittedGlyph(glyph, rows, rows.length);
             }
-            prevGlyph = glyph;
         }
 
         /**
