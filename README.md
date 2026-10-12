@@ -46,7 +46,7 @@
 
 * **To use `figlet-maven-plugin`**: Maven 3.6.0+ and any JVM — the published artifacts target Java 11 bytecode.
 * **To use `figlet4j`** as a standalone library: Java 11 or higher.
-* **To build this project from source**: JDK 17+ and Maven 3.9.0+ (enforced by the build itself; the *compiled* artifacts still target Java 11).
+* **To build this project from source**: JDK 21+ and Maven 3.9.0+ (enforced by the build itself; the *compiled* artifacts still target Java 11).
 
 ## Installation
 

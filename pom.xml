@@ -62,7 +62,7 @@
 
     <properties>
         <releaseJavaVersion>11</releaseJavaVersion>
-        <buildJavaVersion>17</buildJavaVersion>
+        <buildJavaVersion>21</buildJavaVersion>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -80,15 +80,14 @@
 
         <!-- Dependency versions -->
         <dep.assertj.version>3.27.7</dep.assertj.version>
-        <dep.checkstyle.version>12.3.1</dep.checkstyle.version>
+        <dep.checkstyle.version>14.3.0</dep.checkstyle.version>
         <dep.junit.version>5.14.4</dep.junit.version>
-        <dep.mockito.version>5.23.0</dep.mockito.version>
+        <dep.mockito.version>5.24.0</dep.mockito.version>
 
         <!-- Plugin versions (alphabetically) -->
         <dep.plugin.central-publishing.version>0.11.0</dep.plugin.central-publishing.version>
         <dep.plugin.checkstyle.version>3.6.0</dep.plugin.checkstyle.version>
-        <!-- last error-prone version compatible with Java 17; 2.43.0+ requires Java 21 -->
-        <dep.plugin.error-prone.version>2.42.0</dep.plugin.error-prone.version>
+        <dep.plugin.error-prone.version>2.50.0</dep.plugin.error-prone.version>
         <dep.plugin.exec.version>3.6.4</dep.plugin.exec.version>
         <dep.plugin.jacoco.version>0.8.15</dep.plugin.jacoco.version>
         <dep.plugin.maven-compiler.version>3.16.0</dep.plugin.maven-compiler.version>
@@ -106,7 +105,7 @@
         <dep.plugin.maven-surefire.version>3.6.0</dep.plugin.maven-surefire.version>
         <dep.plugin.sonar.version>5.8.0.7211</dep.plugin.sonar.version>
         <dep.plugin.sortpom.version>4.0.0</dep.plugin.sortpom.version>
-        <dep.plugin.versions.version>2.22.0</dep.plugin.versions.version>
+        <dep.plugin.versions.version>2.23.0</dep.plugin.versions.version>
     </properties>
 
     <dependencyManagement>

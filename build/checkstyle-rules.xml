@@ -63,21 +63,17 @@
         <module name="IllegalImport"/>
         <module name="IllegalInstantiation"/>
         <module name="ImportOrder">
-            <property name="groups" value="/^(?:de\.speedbanking)\..+/,/^(?!(?:jakarta|javaf?x?)\.).+/,jakarta,java,javafx,javax"/>
+            <property name="groups" value="/^(?!(?:jakarta|javaf?x?)\.).+/,jakarta,java,javafx,javax"/>
             <property name="ordered" value="true"/>
             <property name="option" value="top"/>
             <property name="separated" value="true"/>
             <property name="separatedStaticGroups" value="true"/>
-            <property name="staticGroups" value="/^(?:de\.speedbanking)\..+/,/^(?!(?:jakarta|javaf?x?)\.).+/,jakarta,java,javafx,javax"/>
+            <property name="staticGroups" value="/^(?!(?:jakarta|javaf?x?)\.).+/,jakarta,java,javafx,javax"/>
             <property name="sortStaticImportsAlphabetically" value="true"/>
         </module>
         <module name="InnerAssignment"/>
         <!--module name="InnerTypeLast" /-->
         <module name="InterfaceIsType"/>
-        <module name="JavadocStyle">
-            <property name="checkFirstSentence" value="false"/>
-            <property name="checkHtml" value="false"/>
-        </module>
         <module name="LeftCurly"/>
         <module name="LocalFinalVariableName">
             <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
