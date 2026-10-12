@@ -63,26 +63,34 @@ final class FigletFontLoaderTest {
 
     @ParameterizedTest
     @CsvSource({
-        "flf2a$ 1 1 10 -1 0,          true",
-        "flf2a$ 1 1 10 0 0,           false",
-        "flf2a$ 1 1 10 15 0,          false",
-        "flf2a$ 1 1 10 -1 0 0 64,     false",
-        "flf2a$ 1 1 10 15 0 0 24463,  false",
-        "flf2a$ 1 1 10 0 0 0 0,       true",
-        "flf2a$ 1 1 10 -1 0 0 x,      true"
+        "flf2a$ 1 1 10 -1 0,          0,   true,  false",
+        "flf2a$ 1 1 10 0 0,           64,  false, false",
+        "flf2a$ 1 1 10 15 0,          143, false, true",
+        "flf2a$ 1 1 10 32 0,          128, false, true",
+        "flf2a$ 1 1 10 63 0,          159, false, true",
+        "flf2a$ 1 1 10 -1 0 0 64,     64,  false, false",
+        "flf2a$ 1 1 10 15 0 0 24463,  143, false, true",
+        "flf2a$ 1 1 10 0 0 0 0,       0,   true,  false",
+        "flf2a$ 1 1 10 -1 0 0 x,      0,   true,  false",
+        "flf2a$ 1 1 10 x 0,           64,  false, false"
     })
-    void loadFromStream_layout_setsFullWidth(String header, boolean expected) {
+    void loadFromStream_layout_setsLayout(String header, int layout, boolean fullWidth, boolean smushing) {
         String s = header + "\n" + " @\n".repeat(102);
 
         FigletFont font = FigletFontLoader.loadFromStream("TestFont", new ByteArrayInputStream(s.getBytes(ISO_8859_1)));
 
-        assertThat(font.isFullWidth()).isEqualTo(expected);
+        assertThat(font.layout()).isEqualTo(layout);
+        assertThat(font.isFullWidth()).isEqualTo(fullWidth);
+        assertThat(font.isSmushing()).isEqualTo(smushing);
     }
 
     @ParameterizedTest
-    @CsvSource({"3x5, true", "gothic, true", "standard, false", "small, false"})
-    void loadBuiltin_fonts_haveExpectedLayout(String fontName, boolean fullWidth) {
-        assertThat(FigletFontLoader.loadBuiltin(fontName).isFullWidth()).isEqualTo(fullWidth);
+    @CsvSource({"3x5, true, false", "gothic, true, false", "standard, false, true", "small, false, true"})
+    void loadBuiltin_fonts_haveExpectedLayout(String fontName, boolean fullWidth, boolean smushing) {
+        FigletFont font = FigletFontLoader.loadBuiltin(fontName);
+
+        assertThat(font.isFullWidth()).isEqualTo(fullWidth);
+        assertThat(font.isSmushing()).isEqualTo(smushing);
     }
 
     @Test

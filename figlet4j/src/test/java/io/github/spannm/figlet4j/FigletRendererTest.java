@@ -550,11 +550,83 @@ final class FigletRendererTest {
     })
     void render_fullWidthFont_placesGlyphsUnfitted(String text, String expectedRow) {
         Map<Integer, char[][]> chars = Map.of((int) 'A', GLYPH_PADDED, (int) ' ', GLYPH_SPACE);
-        FigletFont font = new FigletFont("FullWidth", '$', 2, 1, List.of(), chars, false, true);
+        FigletFont font = new FigletFont("FullWidth", '$', 2, 1, List.of(), chars, false, 0);
 
         String result = new FigletRenderer(font).render(text);
 
         assertThat(result).isEqualTo(expectedRow + "\n" + expectedRow + "\n");
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = ';', value = {
+        "' '; a; 128; a",
+        "a; ' '; 128; a",
+        "' '; a; 64; a",
+        "a; b; 64;",
+        "a; b; 128; b",
+        "$; b; 128; b",
+        "a; $; 128; a",
+        "|; |; 129; |",
+        "|; |; 130;",
+        "_; /; 130; /",
+        "/; _; 130; /",
+        "|; /; 132; /",
+        "[; {; 132; {",
+        "{; (; 132; (",
+        "(; <; 132; <",
+        "/; /; 132;",
+        "[; ]; 136; |",
+        "); (; 136; |",
+        "/; \\; 144; |",
+        "\\; /; 144; Y",
+        ">; <; 144; X",
+        "<; >; 144;",
+        "$; $; 160; $",
+        "$; $; 129;"
+    })
+    void smush_charactersAndRules_returnExpectedCharacter(char left, char right, int layout, Character expected) {
+        char result = FigletRenderer.smush(left, right, layout, '$', false);
+
+        assertThat(result).isEqualTo(expected == null ? (char) 0 : expected);
+    }
+
+    @Test
+    void smush_universalRightToLeft_leftCharacterWins() {
+        assertThat(FigletRenderer.smush('a', 'b', 128, '$', true)).isEqualTo('a');
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false, abb", "true, bba"})
+    void render_universalSmushing_laterCharacterWins(boolean rightToLeft, String expected) {
+        Map<Integer, char[][]> chars = Map.of((int) 'A', new char[][] {{'a', 'a'}}, (int) 'B', new char[][] {{'b', 'b'}});
+        FigletFont font = new FigletFont("Universal", '$', 1, 1, List.of(), chars, rightToLeft, FigletFont.LAYOUT_SMUSHING);
+
+        assertThat(new FigletRenderer(font).render("AB")).isEqualTo(expected + "\n");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"I, II, ||", "H, HH, |-|-|"})
+    void render_equalCharacterSmushing_mergesOnlyGlyphsWiderThanOne(char ch, String text, String expected) {
+        // glyphs narrower than two columns are never smushed, only fitted until they touch
+        Map<Integer, char[][]> chars = Map.of((int) 'I', new char[][] {{'|'}}, (int) 'H', new char[][] {{'|', '-', '|'}});
+        int layout = FigletFont.LAYOUT_SMUSHING | FigletFont.SMUSH_EQUAL;
+        FigletFont font = new FigletFont("Equal", '$', 1, 1, List.of(), chars, false, layout);
+
+        assertThat(new FigletRenderer(font).render(text)).isEqualTo(expected + "\n");
+    }
+
+    @Test
+    void render_standardFont_smushesLikeFiglet() {
+        String result = new FigletRenderer(FigletFontRegistry.loadFont("standard")).render("Hello");
+
+        assertThat(result).isEqualTo(String.join("\n",
+            " _   _      _ _",
+            "| | | | ___| | | ___",
+            "| |_| |/ _ \\ | |/ _ \\",
+            "|  _  |  __/ | | (_) |",
+            "|_| |_|\\___|_|_|\\___/",
+            "",
+            ""));
     }
 
     @Test
@@ -607,7 +679,7 @@ final class FigletRendererTest {
             (int) ' ', GLYPH_SPACE,
             (int) '?', GLYPH_NORMAL
         );
-        return new FigletFont("AsymmetricFont", '$', 2, 1, List.of(), chars, rightToLeft, false);
+        return new FigletFont("AsymmetricFont", '$', 2, 1, List.of(), chars, rightToLeft, FigletFont.LAYOUT_FITTING);
     }
 
 }

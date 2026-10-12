@@ -36,7 +36,12 @@ import java.util.List;
  * of most fonts from being fitted away. Fonts whose header asks for full width
  * (see {@link FigletFont#isFullWidth()}) are not fitted at all: their glyphs
  * are placed next to each other unchanged.
- * Full smushing (merging compatible border characters) is not yet implemented.
+ *
+ * <h2>Smushing</h2>
+ * Fonts whose header asks for smushing (see {@link FigletFont#isSmushing()})
+ * are laid out as by the original FIGlet: adjacent glyphs are moved together
+ * until they touch, and one column further where the two touching characters
+ * can be merged into one according to the smushing rules of the font.
  *
  * <h2>Print direction</h2>
  * Fonts whose header specifies {@code print_direction} 1 (see
@@ -56,6 +61,9 @@ public final class FigletRenderer {
 
     /** Default terminal/output width in characters. Matches the classic FIGlet default. */
     public static final int  DEFAULT_WIDTH = 72;
+
+    /** Character classes of the hierarchy smushing rule, lowest first. */
+    private static final String[] HIERARCHY = {"|", "/\\", "[]", "{}", "()", "<>"};
 
     private final FigletFont font;
     private int              width         = DEFAULT_WIDTH;
@@ -261,7 +269,7 @@ public final class FigletRenderer {
      * @return a new, empty band
      */
     private Band newBand() {
-        return new Band(font.getHeight(), font.isRightToLeft(), font.isFullWidth(), font.getHardblank());
+        return new Band(font.getHeight(), font.isRightToLeft(), font.layout(), font.getHardblank());
     }
 
     /**
@@ -314,6 +322,125 @@ public final class FigletRenderer {
             int s = Math.min(skip, row.length);
             rows[r].append(row, s, row.length - s);
         }
+    }
+
+    /**
+     * Smushes two horizontally adjacent characters according to the smushing
+     * rules in {@code layout}, as defined by the FIGfont specification. A blank
+     * yields the other character. Without any rule bit, universal smushing
+     * applies: the later character wins, except over a hardblank.
+     *
+     * @param left        the left character
+     * @param right       the right character
+     * @param layout      the font's layout bits, see {@link FigletFont#layout()}
+     * @param hardblank   the font's hardblank
+     * @param rightToLeft whether the left character is the later one
+     * @return the merged character, or 0 if the two cannot be smushed
+     */
+    static char smush(char left, char right, int layout, char hardblank, boolean rightToLeft) {
+        if (left == ' ') {
+            return right;
+        } else if (right == ' ') {
+            return left;
+        } else if ((layout & FigletFont.LAYOUT_SMUSHING) == 0) {
+            return 0;
+        } else if ((layout & 63) == 0) {
+            if (left == hardblank) {
+                return right;
+            } else if (right == hardblank) {
+                return left;
+            }
+            return rightToLeft ? left : right;
+        } else if (left == hardblank || right == hardblank) {
+            return (layout & FigletFont.SMUSH_HARDBLANK) != 0 && left == right ? left : 0;
+        }
+        return smushByRules(left, right, layout);
+    }
+
+    /**
+     * Applies the controlled smushing rules for two visible characters, neither a hardblank.
+     *
+     * @param left   the left character
+     * @param right  the right character
+     * @param layout the font's layout bits
+     * @return the merged character, or 0 if no enabled rule applies
+     */
+    private static char smushByRules(char left, char right, int layout) {
+        if ((layout & FigletFont.SMUSH_EQUAL) != 0 && left == right) {
+            return left;
+        }
+        if ((layout & FigletFont.SMUSH_LOWLINE) != 0) {
+            if (left == '_' && "|/\\[]{}()<>".indexOf(right) >= 0) {
+                return right;
+            } else if (right == '_' && "|/\\[]{}()<>".indexOf(left) >= 0) {
+                return left;
+            }
+        }
+        if ((layout & FigletFont.SMUSH_HIERARCHY) != 0) {
+            char winner = hierarchyWinner(left, right);
+            if (winner != 0) {
+                return winner;
+            }
+        }
+        if ((layout & FigletFont.SMUSH_PAIR) != 0 && isOpposingPair(left, right)) {
+            return '|';
+        }
+        if ((layout & FigletFont.SMUSH_BIGX) != 0) {
+            if (left == '/' && right == '\\') {
+                return '|';
+            } else if (left == '\\' && right == '/') {
+                return 'Y';
+            } else if (left == '>' && right == '<') {
+                return 'X';
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Returns the character of the higher class if {@code left} and {@code right}
+     * belong to different classes of the hierarchy rule.
+     *
+     * @param left  the left character
+     * @param right the right character
+     * @return the winning character, or 0 if the rule does not apply
+     */
+    private static char hierarchyWinner(char left, char right) {
+        int leftClass  = hierarchyClass(left);
+        int rightClass = hierarchyClass(right);
+        if (leftClass < 0 || rightClass < 0 || leftClass == rightClass) {
+            return 0;
+        }
+        return leftClass > rightClass ? left : right;
+    }
+
+    /**
+     * Returns the class index of {@code ch} in the hierarchy rule.
+     *
+     * @param ch a character
+     * @return the class index, or -1 if {@code ch} belongs to no class
+     */
+    private static int hierarchyClass(char ch) {
+        for (int i = 0; i < HIERARCHY.length; i++) {
+            if (HIERARCHY[i].indexOf(ch) >= 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Returns whether {@code left} and {@code right} are opposing brackets,
+     * braces or parentheses, in either order.
+     *
+     * @param left  the left character
+     * @param right the right character
+     * @return {@code true} for an opposing pair
+     */
+    private static boolean isOpposingPair(char left, char right) {
+        String pair = new String(new char[] {left, right});
+        return "[]".equals(pair) || "][".equals(pair) || "{}".equals(pair) || "}{".equals(pair)
+            || "()".equals(pair) || ")(".equals(pair);
     }
 
     /**
@@ -560,21 +687,22 @@ public final class FigletRenderer {
 
         private final StringBuilder[] rows;
         private final boolean         mirrored;
-        private final boolean         fullWidth;
+        private final int             layout;
         private final char            hardblank;
         private boolean               empty     = true;
+        private int                   prevWidth;
 
         /**
          * Creates an empty band.
          *
          * @param height    number of font rows
          * @param mirrored  whether the band is built from mirrored glyphs
-         * @param fullWidth whether glyphs are placed next to each other without fitting
+         * @param layout    the font's layout bits, see {@link FigletFont#layout()}
          * @param hardblank the font's hardblank, printed as a space
          */
-        Band(int height, boolean mirrored, boolean fullWidth, char hardblank) {
+        Band(int height, boolean mirrored, int layout, char hardblank) {
             this.mirrored = mirrored;
-            this.fullWidth = fullWidth;
+            this.layout = layout;
             this.hardblank = hardblank;
             rows = new StringBuilder[height];
             for (int r = 0; r < height; r++) {
@@ -593,16 +721,18 @@ public final class FigletRenderer {
                 rows[r] = new StringBuilder(other.rows[r]);
             }
             mirrored = other.mirrored;
-            fullWidth = other.fullWidth;
+            layout = other.layout;
             hardblank = other.hardblank;
             empty = other.empty;
+            prevWidth = other.prevWidth;
         }
 
         /**
          * Appends {@code glyph}, fitted against the content of this band.
          * The first glyph of a band is stripped of its uniform leading whitespace
          * so that the output starts flush at column zero. At full width, the
-         * glyph is appended unchanged instead. Empty glyphs are skipped.
+         * glyph is appended unchanged instead, and smushing fonts smush it.
+         * Empty glyphs are skipped.
          *
          * @param glyph glyph row data
          */
@@ -610,15 +740,102 @@ public final class FigletRenderer {
             if (glyph.length == 0) {
                 return;
             }
-            if (fullWidth) {
+            if ((layout & (FigletFont.LAYOUT_FITTING | FigletFont.LAYOUT_SMUSHING)) == 0) {
                 appendUnfittedGlyph(glyph, rows);
-                empty = false;
             } else if (empty) {
                 appendFirstGlyph(glyph, rows, rows.length);
-                empty = false;
+            } else if ((layout & FigletFont.LAYOUT_SMUSHING) != 0) {
+                appendSmushedGlyph(glyph);
             } else {
                 appendFittedGlyph(glyph, rows, rows.length);
             }
+            empty = false;
+            prevWidth = glyph[0].length;
+        }
+
+        /**
+         * Appends {@code glyph} smushed against the content of this band: the
+         * overlapping columns are merged character by character, the rest of
+         * the glyph is appended.
+         *
+         * @param glyph glyph row data
+         */
+        private void appendSmushedGlyph(char[][] glyph) {
+            int amount = smushAmount(glyph);
+            int width  = glyph[0].length;
+            for (int r = 0; r < rows.length; r++) {
+                StringBuilder row = rows[r];
+                char[] glyphRow = r < glyph.length ? glyph[r] : new char[0];
+                int keep = row.length() - amount;
+                String tail = row.substring(Math.max(0, keep));
+                row.setLength(Math.max(0, keep));
+                for (int k = 0; k < glyphRow.length; k++) {
+                    int pos = keep + k;
+                    if (pos < 0) {
+                        continue;
+                    }
+                    if (k < amount) {
+                        char merged = smushPair(tail.charAt(pos - Math.max(0, keep)), glyphRow[k], width);
+                        row.append(merged == 0 ? glyphRow[k] : merged);
+                    } else {
+                        row.append(glyphRow[k]);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Computes by how many columns {@code glyph} is moved into the content
+         * of this band: per row, until its first visible character touches the
+         * last visible character of the row, plus one if the two can be smushed.
+         * The minimum across all rows is used, but never more than the width of
+         * the glyph.
+         *
+         * @param glyph glyph row data
+         * @return number of overlapping columns
+         */
+        private int smushAmount(char[][] glyph) {
+            int width  = glyph[0].length;
+            int amount = width;
+            for (int r = 0; r < rows.length; r++) {
+                StringBuilder row = rows[r];
+                char[] glyphRow = r < glyph.length ? glyph[r] : new char[0];
+
+                int lineBound = row.length() - 1;
+                while (lineBound > 0 && row.charAt(lineBound) == ' ') {
+                    lineBound--;
+                }
+                char left = row.length() == 0 ? 0 : row.charAt(Math.max(0, lineBound));
+
+                int charBound = leadingSpaces(glyphRow);
+                char right = charBound < glyphRow.length ? glyphRow[charBound] : 0;
+
+                int rowAmount = charBound + row.length() - 1 - Math.max(0, lineBound);
+                if (left == 0 || left == ' ' || (right != 0 && smushPair(left, right, width) != 0)) {
+                    rowAmount++;
+                }
+                amount = Math.min(amount, rowAmount);
+            }
+            return amount;
+        }
+
+        /**
+         * Smushes a character of this band with a character of the glyph being
+         * appended, taking the print direction into account: in a mirrored band,
+         * the glyph is on the left.
+         *
+         * @param bandChar   character of this band
+         * @param glyphChar  character of the glyph being appended
+         * @param glyphWidth width of the glyph being appended
+         * @return the merged character, or 0 if the two cannot be smushed
+         */
+        private char smushPair(char bandChar, char glyphChar, int glyphWidth) {
+            if (bandChar != ' ' && glyphChar != ' ' && (prevWidth < 2 || glyphWidth < 2)) {
+                return 0;
+            }
+            return mirrored
+                ? smush(glyphChar, bandChar, layout, hardblank, true)
+                : smush(bandChar, glyphChar, layout, hardblank, false);
         }
 
         /**

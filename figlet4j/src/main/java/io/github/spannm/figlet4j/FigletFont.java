@@ -34,6 +34,23 @@ import java.util.StringJoiner;
  */
 public final class FigletFont {
 
+    /** Layout bit: smush two equal characters into one. */
+    static final int                     SMUSH_EQUAL     = 1;
+    /** Layout bit: an underscore is replaced by a border character. */
+    static final int                     SMUSH_LOWLINE   = 2;
+    /** Layout bit: of two border characters of different classes, the later class wins. */
+    static final int                     SMUSH_HIERARCHY = 4;
+    /** Layout bit: opposing brackets, braces or parentheses become a vertical bar. */
+    static final int                     SMUSH_PAIR      = 8;
+    /** Layout bit: slashes and angle brackets form a vertical bar, a Y or an X. */
+    static final int                     SMUSH_BIGX      = 16;
+    /** Layout bit: two hardblanks are smushed into one. */
+    static final int                     SMUSH_HARDBLANK = 32;
+    /** Layout bit: glyphs are fitted together. */
+    static final int                     LAYOUT_FITTING  = 64;
+    /** Layout bit: glyphs are smushed together. */
+    static final int                     LAYOUT_SMUSHING = 128;
+
     private final String                 name;
     private final char                   hardblank;
     private final int                    height;
@@ -41,19 +58,19 @@ public final class FigletFont {
     private final List<String>           comment;
     private final Map<Integer, char[][]> characters; // codepoint -> rows of chars
     private final boolean                rightToLeft;
-    private final boolean                fullWidth;
+    private final int                    layout;
 
     FigletFont(String fontName, char hardblank, int height, int baseline,
                List<String> comment, Map<Integer, char[][]> characters) {
-        this(fontName, hardblank, height, baseline, comment, characters, false, false);
+        this(fontName, hardblank, height, baseline, comment, characters, false, LAYOUT_FITTING);
     }
 
     FigletFont(String fontName, char hardblank, int height, int baseline,
-               List<String> comment, Map<Integer, char[][]> characters, boolean rightToLeft, boolean fullWidth) {
+               List<String> comment, Map<Integer, char[][]> characters, boolean rightToLeft, int layout) {
 
         this.name = requireNonNull(fontName, "fontName");
         this.rightToLeft = rightToLeft;
-        this.fullWidth = fullWidth;
+        this.layout = layout;
         this.hardblank = hardblank;
         this.height = height;
         this.baseline = baseline;
@@ -114,11 +131,35 @@ public final class FigletFont {
      * glyphs together, as specified by the {@code full_layout} header field or,
      * if that is absent, by {@code old_layout} being -1.
      *
-     * @return {@code true} for full width, {@code false} if glyphs are fitted
+     * @return {@code true} for full width, {@code false} if glyphs are fitted or smushed
      * @since 1.0.1
      */
     public boolean isFullWidth() {
-        return fullWidth;
+        return (layout & (LAYOUT_FITTING | LAYOUT_SMUSHING)) == 0;
+    }
+
+    /**
+     * Returns whether glyphs of this font are smushed together, i.e. moved one
+     * column closer than fitting and merged where their border characters
+     * touch, as specified by the {@code full_layout} header field or, if that
+     * is absent, by a positive {@code old_layout}.
+     *
+     * @return {@code true} if glyphs are smushed
+     * @since 1.0.1
+     */
+    public boolean isSmushing() {
+        return (layout & LAYOUT_SMUSHING) != 0;
+    }
+
+    /**
+     * Returns the horizontal layout bits, as defined for the {@code full_layout}
+     * header field: the smushing rules ({@code SMUSH_*}) plus
+     * {@link #LAYOUT_FITTING} and {@link #LAYOUT_SMUSHING}.
+     *
+     * @return the layout bits
+     */
+    int layout() {
+        return layout;
     }
 
     /** Returns normalized comment lines of this font. */
@@ -187,7 +228,7 @@ public final class FigletFont {
             .add("height=" + height)
             .add("baseline=" + baseline)
             .add("rightToLeft=" + rightToLeft)
-            .add("fullWidth=" + fullWidth)
+            .add("layout=" + layout)
             .add("comment=" + comment.size())
             .add("characters=" + characters.size())
             .toString();

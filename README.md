@@ -29,7 +29,7 @@
 
 * **Markup DSL** — mix several fonts and literal, unrendered text in a single banner, with Maven `${...}` property placeholder support.
 
-* **Word-wrap & kerning** — automatic word-wrapping at a configurable width, with glyphs fitted together instead of separated by ragged whitespace.
+* **Word-wrap, kerning & smushing** — automatic word-wrapping at a configurable width, with glyphs laid out as each font specifies: at full width, fitted together, or smushed like the original FIGlet does.
 
 * **High test coverage** — JUnit 5 + AssertJ across the parser, renderer, font loader and every Mojo.
 

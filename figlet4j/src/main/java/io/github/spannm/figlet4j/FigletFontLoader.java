@@ -198,7 +198,7 @@ public final class FigletFontLoader {
 
         // print_direction is optional: 0 = left-to-right, 1 = right-to-left
         boolean rightToLeft = parts.length > 5 && "1".equals(parts[5]);
-        boolean fullWidth = isFullWidth(parts);
+        int layout = layout(parts);
 
         if (height <= 0) {
             throw new FigletException(String.format(
@@ -261,7 +261,7 @@ public final class FigletFontLoader {
         }
 
         LOGGER.log(Level.DEBUG, "Loaded font {0} with {1} characters", fontName, characters.size());
-        return new FigletFont(fontName, hardblank, height, baseline, comment, characters, rightToLeft, fullWidth);
+        return new FigletFont(fontName, hardblank, height, baseline, comment, characters, rightToLeft, layout);
     }
 
     /**
@@ -342,26 +342,36 @@ public final class FigletFontLoader {
     }
 
     /**
-     * Determines from the header fields whether glyphs are laid out at full width.
+     * Determines the horizontal layout bits (see {@link FigletFont#layout()}) from the header fields.
      * <p>
-     * The optional {@code full_layout} field takes precedence: full width means
-     * that neither horizontal fitting (64) nor horizontal smushing (128) is
-     * enabled. Without it, {@code old_layout} -1 means full width, 0 fitting
-     * and a positive value smushing. Fields that are not numeric are ignored,
-     * falling back to fitting.
+     * The optional {@code full_layout} field takes precedence; only its
+     * horizontal bits are used. Without it, {@code old_layout} -1 means full
+     * width, 0 fitting, and a positive value smushing with the rules given by
+     * its bits. As in the original FIGlet, the hardblank rule (32) is not taken
+     * from {@code old_layout}, so a value of 32 means universal smushing.
+     * Fields that are not numeric are ignored, falling back to fitting.
      *
      * @param parts the header fields following the signature and hardblank
-     * @return {@code true} if glyphs are laid out at full width
+     * @return the layout bits
      */
-    private static boolean isFullWidth(String[] parts) {
+    private static int layout(String[] parts) {
         if (parts.length > 6) {
             try {
-                return (Integer.parseInt(parts[6]) & (64 | 128)) == 0;
+                return Integer.parseInt(parts[6]) & 0xFF;
             } catch (NumberFormatException ex) {
                 LOGGER.log(Level.DEBUG, "Ignoring non-numeric full_layout {0}", parts[6]);
             }
         }
-        return "-1".equals(parts[3]);
+        try {
+            int oldLayout = Integer.parseInt(parts[3]);
+            if (oldLayout < 0) {
+                return 0;
+            }
+            return oldLayout == 0 ? FigletFont.LAYOUT_FITTING : (oldLayout & 31) | FigletFont.LAYOUT_SMUSHING;
+        } catch (NumberFormatException ex) {
+            LOGGER.log(Level.DEBUG, "Ignoring non-numeric old_layout {0}", parts[3]);
+            return FigletFont.LAYOUT_FITTING;
+        }
     }
 
     private static int parseCodepoint(String tag) {
