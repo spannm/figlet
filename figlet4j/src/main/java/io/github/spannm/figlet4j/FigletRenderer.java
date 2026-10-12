@@ -427,20 +427,15 @@ public final class FigletRenderer {
     }
 
     /**
-     * Appends {@code glyph} to {@code rows} without fitting, padding shorter
-     * glyph rows so that all rows stay aligned.
+     * Appends {@code glyph} to {@code rows} without fitting. As in the original
+     * FIGlet, rows are appended unchanged, even if a glyph's rows differ in length.
      *
      * @param glyph glyph row data
      * @param rows  per-row output buffers
      */
     private static void appendUnfittedGlyph(char[][] glyph, StringBuilder[] rows) {
-        int width = 0;
-        for (char[] row : glyph) {
-            width = Math.max(width, row.length);
-        }
         for (int r = 0; r < rows.length; r++) {
-            char[] row = r < glyph.length ? glyph[r] : new char[0];
-            rows[r].append(row).append(" ".repeat(width - row.length));
+            rows[r].append(r < glyph.length ? glyph[r] : new char[0]);
         }
     }
 

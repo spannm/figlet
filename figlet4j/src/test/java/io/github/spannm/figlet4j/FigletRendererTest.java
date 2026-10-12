@@ -541,6 +541,14 @@ final class FigletRendererTest {
     }
 
     @Test
+    void render_fullWidthFontWithUnevenRows_appendsRowsUnchanged() {
+        Map<Integer, char[][]> chars = Map.of((int) 'X', new char[][] {{'a', 'b', ' '}, {'c'}});
+        FigletFont font = new FigletFont("Uneven", '$', 2, 1, List.of(), chars, false, 0);
+
+        assertThat(new FigletRenderer(font).render("XX")).isEqualTo("ab ab\ncc\n");
+    }
+
+    @Test
     void render_wrappedWordWiderThanWidthFollowedByText_wrapsAgain() {
         // "BBBB" moves to a new band but is still too wide on its own, so the
         // following space must start yet another band
