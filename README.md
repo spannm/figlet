@@ -1,17 +1,21 @@
 <div align="center">
   <a href="https://central.sonatype.com/artifact/io.github.spannm/figlet-maven-plugin"><img src="https://img.shields.io/maven-central/v/io.github.spannm/figlet-maven-plugin?label=Maven%20Central&style=flat-square" alt="Maven Central Version"></a>
   <img src="https://img.shields.io/maven-central/last-update/io.github.spannm/figlet-maven-plugin?label=Updated&style=flat-square&color=blue" alt="Maven Central Last Update">
+  <a href="https://javadoc.io/doc/io.github.spannm/figlet4j"><img src="https://javadoc.io/badge2/io.github.spannm/figlet4j/javadoc.svg?style=flat-square" alt="Javadoc"></a>
+  <img src="https://img.shields.io/badge/Java-11%2B-blue?style=flat-square" alt="Java 11+">
+  <a href="https://github.com/spannm/figlet/blob/master/LICENSE.txt"><img src="https://img.shields.io/github/license/spannm/figlet?style=flat-square" alt="License"></a>
   <a href="https://github.com/spannm/figlet/stargazers"><img src="https://img.shields.io/github/stars/spannm/figlet?logo=github&label=&logoColor=white&labelColor=555555&color=007ec6&style=flat-square" alt="GitHub Stars"></a>
   <br>
   <a href="https://github.com/spannm/figlet/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/spannm/figlet/ci.yml?label=Build&style=flat-square" alt="GitHub Actions Build Status"></a>
   <a href="https://github.com/spannm/figlet/actions/workflows/codeql.yml"><img src="https://img.shields.io/github/actions/workflow/status/spannm/figlet/codeql.yml?label=CodeQL&style=flat-square" alt="CodeQL Workflow Status"></a>
-  <a href="https://javadoc.io/doc/io.github.spannm/figlet4j"><img src="https://javadoc.io/badge2/io.github.spannm/figlet4j/javadoc.svg?style=flat-square" alt="Javadoc"></a>
+  <a href="https://sonarcloud.io/summary/overall?id=io.github.spannm%3Afiglet"><img src="https://img.shields.io/sonar/quality_gate/io.github.spannm:figlet?server=https%3A%2F%2Fsonarcloud.io&style=flat-square" alt="SonarCloud Quality Gate"></a>
+  <a href="https://sonarcloud.io/component_measures?id=io.github.spannm%3Afiglet&metric=coverage"><img src="https://img.shields.io/sonar/coverage/io.github.spannm:figlet?server=https%3A%2F%2Fsonarcloud.io&style=flat-square" alt="SonarCloud Coverage"></a>
 </div>
 
 <h1 align="center">figlet</h1>
 <h3 align="center">ASCII art banners for your Maven build</h3>
 
-**figlet** is a pure-Java library and Maven plugin for rendering text as ASCII art, powered by classic FIGfont (`.flf`) and TOIlet (`.tlf`) fonts — no native `figlet` binary, no external tools, works anywhere a JVM runs.
+**figlet** is a pure-Java library and Maven plugin for rendering text as ASCII art, powered by classic FIGfont (`.flf`) and TOIlet (`.tlf`) fonts. No native `figlet` binary, no external tools, it works anywhere a JVM runs.
 
 ```
   ░█▀▀░▀█▀░█▀▀░█░░░█▀▀░▀█▀
@@ -21,30 +25,30 @@
 
 ## Key Features
 
-* **Pure Java, no third-party runtime dependencies** — `figlet4j` only pulls in its own bundled font resources; runs anywhere a JVM does.
+* **Pure Java, no third-party runtime dependencies** - `figlet4j` only pulls in its own bundled font resources; runs anywhere a JVM does.
 
-* **A huge font collection, built in** — 146 FIGfonts bundled by default, plus 400 more via the optional `figlet-fonts-xero` module, about 250 of them not in the default set.
+* **A huge font collection, built in** - 146 FIGfonts bundled by default, plus 400 more via the optional `figlet-fonts-xero` module, about 250 of them not in the default set.
 
-* **Maven-native** — `figlet-maven-plugin` prints a banner straight into your build log; it runs once per multi-module reactor, not once per module.
+* **Maven-native** - `figlet-maven-plugin` prints a banner straight into your build log; it runs once per multi-module reactor, not once per module.
 
-* **Markup DSL** — mix several fonts and literal, unrendered text in a single banner, with Maven `${...}` property placeholder support.
+* **Markup DSL** - mix several fonts and literal, unrendered text in a single banner, with Maven `${...}` property placeholder support.
 
-* **Word-wrap, kerning & smushing** — automatic word-wrapping at a configurable width, with glyphs laid out as each font specifies: at full width, fitted together, or smushed like the original FIGlet does.
+* **Word-wrap, kerning & smushing** - automatic word-wrapping at a configurable width, with glyphs laid out as each font specifies: at full width, fitted together, or smushed like the original FIGlet does.
 
-* **High test coverage** — JUnit 5 + AssertJ across the parser, renderer, font loader and every Mojo.
+* **High test coverage** - JUnit 5 + AssertJ across the parser, renderer, font loader and every Mojo.
 
 ## Modules
 
-| Module                   | Description                                                                                                              |
-|---------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| `figlet4j`               | Pure Java library for rendering text using FIGfonts (`.flf`) and TOIlet fonts (`.tlf`)                                   |
-| `figlet-fonts-figletorg` | 146 standard FIGfont resources collected from [figlet.org](https://www.figlet.org)                                      |
+| Module                   | Description                                                                                                                                      |
+|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `figlet4j`               | Pure Java library for rendering text using FIGfonts (`.flf`) and TOIlet fonts (`.tlf`)                                                           |
+| `figlet-fonts-figletorg` | 146 standard FIGfont resources collected from [figlet.org](https://www.figlet.org)                                                               |
 | `figlet-fonts-xero`      | 400 FIGfonts and TOIlet fonts from the [xero/figlet-fonts](https://github.com/xero/figlet-fonts) repository, a superset of the figlet.org fonts |
-| `figlet-maven-plugin`    | Maven plugin — print ASCII art banners during your build                                                                 |
+| `figlet-maven-plugin`    | Maven plugin - print ASCII art banners during your build                                                                                         |
 
 ## Tech Stack & Requirements
 
-* **To use `figlet-maven-plugin`**: Maven 3.6.0+ and any JVM — the published artifacts target Java 11 bytecode.
+* **To use `figlet-maven-plugin`**: Maven 3.6.0+ running on Java 11 or higher.
 * **To use `figlet4j`** as a standalone library: Java 11 or higher.
 * **To build this project from source**: JDK 21+ and Maven 3.9.0+ (enforced by the build itself; the *compiled* artifacts still target Java 11).
 
@@ -66,14 +70,28 @@ Add to your `pom.xml`:
       </goals>
     </execution>
   </executions>
-  <configuration>
-    <content>${project.name} ${project.version}</content>
-    <font>chunky</font>
-  </configuration>
 </plugin>
 ```
 
 The `<execution>` is required, otherwise the goal is never invoked. It binds to the `validate` phase by default, so no `<phase>` is needed. In a multi-module build, declare it once in the parent POM.
+
+Without further configuration, the project name is rendered in the `standard` font, followed by the version:
+
+```
+[INFO] --- figlet:1.1.0:render (default) @ my-app ---
+[INFO]
+[INFO]
+[INFO]  _ __ ___  _   _        __ _ _ __  _ __
+[INFO] | '_ ` _ \| | | |_____ / _` | '_ \| '_ \
+[INFO] | | | | | | |_| |_____| (_| | |_) | |_) |
+[INFO] |_| |_| |_|\__, |      \__,_| .__/| .__/
+[INFO]            |___/            |_|   |_|
+[INFO]
+[INFO]     v1.0.0
+[INFO]
+```
+
+Use `<content>` and `<font>` in a `<configuration>` block to change what is rendered and how, see [`render` configuration](#render-configuration). All fonts of both font modules are available to the plugin.
 
 ### As a Java library (`figlet4j`)
 
@@ -99,20 +117,55 @@ implementation 'io.github.spannm:figlet4j:1.1.0'
 implementation("io.github.spannm:figlet4j:1.1.0")
 ```
 
+`figlet4j` comes with the 146 figlet.org fonts. For the extended collection, add `figlet-fonts-xero` as well, its fonts are picked up from the classpath automatically:
+
+```xml
+<dependency>
+  <groupId>io.github.spannm</groupId>
+  <artifactId>figlet-fonts-xero</artifactId>
+  <version>1.1.0</version>
+</dependency>
+```
+
 ## Quick Start
 
 ```java
-FigletFont font = FigletFontLoader.loadBuiltin("standard");
+FigletFont font = FigletFontRegistry.loadFont("standard");
 FigletRenderer renderer = new FigletRenderer(font).withWidth(100);
 System.out.println(renderer.render("Hello World"));
 ```
 
-Or mix multiple fonts and plain text during a Maven build with the [markup DSL](#markup-dsl) below.
+```
+ _   _      _ _        __        __         _     _
+| | | | ___| | | ___   \ \      / /__  _ __| | __| |
+| |_| |/ _ \ | |/ _ \   \ \ /\ / / _ \| '__| |/ _` |
+|  _  |  __/ | | (_) |   \ V  V / (_) | |  | | (_| |
+|_| |_|\___|_|_|\___/     \_/\_/ \___/|_|  |_|\__,_|
+```
+
+`FigletFontRegistry` finds fonts by name, case-insensitively, and caches them once parsed. A few more things the library can do:
+
+```java
+// lenient mode prints '?' for characters the font lacks instead of failing
+String banner = new FigletRenderer(FigletFontRegistry.loadFont("slant"))
+    .setStrict(false)
+    .render("Hello, World!");
+
+// fonts outside the classpath, loaded directly or registered under a name
+FigletFont custom = FigletFontLoader.loadFromFile(Path.of("fonts/myfont.flf"));
+FigletFontRegistry.registerExternal("myfont", Path.of("fonts/myfont.flf"));
+
+// several fonts and plain text in one banner, using the markup DSL
+String mixed = new FigletMarkupRenderer(FigletFontRegistry::loadFont)
+    .render("<figletFont name=\"small\">v1.1.0</figletFont><lineBreak/>built today");
+```
+
+The [markup DSL](#markup-dsl) is described below.
 
 ## Goals
 
 | Goal                | Default phase | Description                             |
-|----------------------|---------------|-----------------------------------------|
+|---------------------|---------------|-----------------------------------------|
 | `figlet:render`     | `validate`    | Renders ASCII art to the build log      |
 | `figlet:list-fonts` | _(none)_      | Lists all available fonts with metadata |
 | `figlet:help`       | _(none)_      | Shows usage and credits                 |
@@ -124,25 +177,26 @@ Or mix multiple fonts and plain text during a Maven build with the [markup DSL](
 
 ### `render` configuration
 
-| Parameter  | Property          | Default           | Description                                                      |
-|------------|-------------------|-------------------|--------------------------------------------------------------------|
-| `content`  | `figlet.content`  | _(project name as banner, version below)_ | Content to render; supports `${...}` property placeholders and the [markup DSL](#markup-dsl) to mix multiple fonts with plain text |
-| `font`     | `figlet.font`     | `standard`        | Name of a built-in font (see `figlet:list-fonts`)                |
-| `fontFile` | `figlet.fontFile` | _(none)_          | Path to an external `.flf` or `.tlf` file; takes precedence over `font` when both are set |
-| `width`    | `figlet.width`    | `72`              | Max output width; long lines wrap at word boundaries             |
-| `strict`   | `figlet.strict`   | `true`            | Fail if the content contains characters not supported by the font, or a `${...}` placeholder cannot be resolved |
-| `target`   | `figlet.target`   | `info`            | Where to write the banner: `info`, `debug`, `stdout`, or `stderr` |
-| `executionRootOnly` | `figlet.executionRootOnly` | `true` | Only render for the execution-root project of a multi-module build |
-| `skip`     | `figlet.skip`     | `false`           | Skip this goal entirely                                          |
+| Parameter           | Property                   | Default                                   | Description                                                                                                                         |
+|---------------------|----------------------------|-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `content`           | `figlet.content`           | _(project name as banner, version below)_ | Content to render; supports `${...}` property placeholders and the [markup DSL](#markup-dsl) to mix multiple fonts with plain text |
+| `font`              | `figlet.font`              | `standard`                                | Name of a built-in font (see `figlet:list-fonts`)                                                                                   |
+| `fontFile`          | `figlet.fontFile`          | _(none)_                                  | Path to an external `.flf` or `.tlf` file; takes precedence over `font` when both are set                                          |
+| `width`             | `figlet.width`             | `72`                                      | Max output width; long lines wrap at word boundaries                                                                                |
+| `strict`            | `figlet.strict`            | `true`                                    | Fail if the content contains characters not supported by the font, or a `${...}` placeholder cannot be resolved                    |
+| `target`            | `figlet.target`            | `info`                                    | Where to write the banner: `info`, `debug`, `stdout`, or `stderr`                                                                  |
+| `executionRootOnly` | `figlet.executionRootOnly` | `true`                                    | Only render for the execution-root project of a multi-module build                                                                  |
+| `skip`              | `figlet.skip`              | `false`                                   | Skip this goal entirely                                                                                                             |
 
 ### `list-fonts` configuration
 
-| Parameter    | Property             | Default    | Description                                                             |
-|--------------|-----------------------|------------|---------------------------------------------------------------------------|
-| `metadata`   | `figlet.metadata`    | `false`    | Load every font and print its metadata comment block (author, date, …) |
-| `sample`     | `figlet.sample`      | `false`    | Render a short ASCII-art sample for every listed font                  |
-| `sampleText` | `figlet.sampleText`  | _(random)_ | Custom sample text; defaults to a varied, always-renderable fallback   |
-| `skip`       | `figlet.skip`        | `false`    | Skip this goal entirely                                                |
+| Parameter     | Property            | Default    | Description                                                              |
+|---------------|---------------------|------------|--------------------------------------------------------------------------|
+| `metadata`    | `figlet.metadata`   | `false`    | Load every font and print its metadata comment block (author, date, ...) |
+| `printSample` | `figlet.sample`     | `false`    | Render a short ASCII-art sample for every listed font                    |
+| `sampleText`  | `figlet.sampleText` | _(random)_ | Custom sample text; defaults to a varied, always-renderable fallback     |
+| `width`       | `figlet.width`      | `72`       | Max width of the samples; long lines wrap at word boundaries             |
+| `skip`        | `figlet.skip`       | `false`    | Skip this goal entirely                                                  |
 
 ## Markup DSL
 
@@ -156,17 +210,23 @@ Or mix multiple fonts and plain text during a Maven build with the [markup DSL](
 ]]></content>
 ```
 
-- `<figletFont name="...">...</figletFont>` — enclosed text is rendered as ASCII art using the named built-in font. Without the `name` attribute, `<figletFont>...</figletFont>` uses the font configured via `font`/`fontFile`.
-- `<lineBreak/>` — an explicit line break, independent of font or automatic word-wrapping.
-- `<preserveWhitespace>...</preserveWhitespace>` — enclosed text is emitted verbatim (leading/trailing whitespace and blank lines kept), unlike plain text which is trimmed.
+- `<figletFont name="...">...</figletFont>` - enclosed text is rendered as ASCII art using the named built-in font. Without the `name` attribute, `<figletFont>...</figletFont>` uses the font configured via `font`/`fontFile`.
+- `<lineBreak/>` - an explicit line break, independent of font or automatic word-wrapping.
+- `<preserveWhitespace>...</preserveWhitespace>` - enclosed text is emitted verbatim (leading/trailing whitespace and blank lines kept), unlike plain text which is trimmed.
 - Everything else is literal text, printed as-is.
-- If `content` contains no `<figletFont>` tag at all, the whole (resolved) content is rendered as a single banner using `font`/`fontFile` — exactly as if it had been wrapped in one `<figletFont>` tag referencing that font.
+- If `content` contains no `<figletFont>` tag at all, the whole (resolved) content is rendered as a single banner using `font`/`fontFile`, exactly as if it had been wrapped in one `<figletFont>` tag referencing that font.
 
 ## Fonts
 
-Run `mvn figlet:list-fonts` to browse every font on your classpath — add `-Dfiglet.sample=true` to render a live sample of each one.
+Browse every available font with the `list-fonts` goal, and add `-Dfiglet.sample=true` to render a live sample of each one:
 
-> Font files retain their original licenses — see the `LICENSE.txt` in each `figlet-fonts-*` module for details.
+```bash
+mvn io.github.spannm:figlet-maven-plugin:list-fonts -Dfiglet.sample=true
+```
+
+In a project that declares the plugin in its POM, the short form `mvn figlet:list-fonts` works as well. Elsewhere Maven cannot resolve the `figlet` prefix, unless `io.github.spannm` is added to the `<pluginGroups>` in your `settings.xml`.
+
+> Font files retain their original licenses, see the `LICENSE.txt` in each `figlet-fonts-*` module for details.
 
 ## Building from source
 
@@ -198,10 +258,11 @@ Font files retain their original licenses. See the respective `LICENSE.txt` or n
 
 ## Credits
 
-* **FIGlet** — Glenn Chappell, Ian Chai, Frank Sheeran (1991) — https://www.figlet.org
-* **TOIlet** — Sam Hocevar (2006) — localhost/libcaca TOIlet tools (Sub-set specification support)
-* **FIGfont spec** — John Cowan, Paul Burton (1996/1997)
-* **jfiglet** — Lajos Puskas, inspired by Benoît Rigaut's CERN implementation
+* **FIGlet** - Glenn Chappell, Ian Chai, Frank Sheeran (1991) - https://www.figlet.org
+* **FIGfont spec** - John Cowan, Paul Burton (1996/1997) - https://www.jave.de/figlet/figfont.html
+* **TOIlet** - Sam Hocevar (2006) - http://caca.zoy.org/wiki/toilet
+* **jfiglet** - Lajos Puskas, inspired by Benoît Rigaut's CERN implementation - https://github.com/lalyos/jfiglet
+* **xero/figlet-fonts** - the font collection behind `figlet-fonts-xero` - https://github.com/xero/figlet-fonts
 
 <p style="height: 40px;">&nbsp;</p>
 
