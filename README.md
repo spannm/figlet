@@ -23,7 +23,7 @@
 
 * **Pure Java, no third-party runtime dependencies** — `figlet4j` only pulls in its own bundled font resources; runs anywhere a JVM does.
 
-* **A huge font collection, built in** — 146 FIGfonts bundled by default, plus 400+ more via the optional `figlet-fonts-xero` module.
+* **A huge font collection, built in** — 146 FIGfonts bundled by default, plus 400 more via the optional `figlet-fonts-xero` module, about 250 of them not in the default set.
 
 * **Maven-native** — `figlet-maven-plugin` prints a banner straight into your build log; it runs once per multi-module reactor, not once per module.
 
@@ -39,7 +39,7 @@
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | `figlet4j`               | Pure Java library for rendering text using FIGfonts (`.flf`) and TOIlet fonts (`.tlf`)                                   |
 | `figlet-fonts-figletorg` | 146 standard FIGfont resources collected from [figlet.org](https://www.figlet.org)                                      |
-| `figlet-fonts-xero`      | 400+ additional FIGfonts and TOIlet fonts from the [xero/figlet-fonts](https://github.com/xero/figlet-fonts) repository |
+| `figlet-fonts-xero`      | 400 FIGfonts and TOIlet fonts from the [xero/figlet-fonts](https://github.com/xero/figlet-fonts) repository, a superset of the figlet.org fonts |
 | `figlet-maven-plugin`    | Maven plugin — print ASCII art banners during your build                                                                 |
 
 ## Tech Stack & Requirements
