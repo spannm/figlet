@@ -32,8 +32,7 @@ jobs:
                     java: '25'
                     build-java: '25'
         runs-on: ${{ matrix.os }}
-        # JDK 25 is a forward-compatibility canary (see errorprone-fatal profile notes in pom.xml
-        # on Error Prone's JDK ceiling): let it fail without failing the workflow or blocking deploy.
+        # JDK 25 is a forward-compatibility canary: let it fail without failing the workflow or blocking deploy.
         continue-on-error: ${{ matrix.java == '25' }}
         steps:
         -   name: Check out repository (incl. font submodules)
