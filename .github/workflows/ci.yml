@@ -24,10 +24,13 @@ jobs:
             fail-fast: false
             matrix:
                 os: [ubuntu-latest, windows-latest]
-                java: ['21']
+                # java is the JDK the tests run on, build-java the JDK that runs Maven
+                java: ['11', '17', '21']
+                build-java: ['21']
                 include:
                 -   os: ubuntu-latest
                     java: '25'
+                    build-java: '25'
         runs-on: ${{ matrix.os }}
         # JDK 25 is a forward-compatibility canary (see errorprone-fatal profile notes in pom.xml
         # on Error Prone's JDK ceiling): let it fail without failing the workflow or blocking deploy.
@@ -53,18 +56,22 @@ jobs:
                     fi
                 done
 
-        -   name: Set up JDK ${{ matrix.java }}
+        -   name: Set up JDK ${{ matrix.build-java }} (build) and JDK ${{ matrix.java }} (test toolchain)
+            # installing matrix.java alongside build-java registers both in ~/.m2/toolchains.xml; the
+            # last version listed becomes JAVA_HOME/the JDK that runs Maven itself.
             uses: actions/setup-java@v6
             with:
-                java-version: ${{ matrix.java }}
+                java-version: |
+                    ${{ matrix.java }}
+                    ${{ matrix.build-java }}
                 distribution: 'temurin'
                 cache: maven
 
         # the Maven wrapper pins the Maven version instead of using whatever the runner image ships;
         # bash so that ./mvnw also works on Windows
-        -   name: Build with Maven/JDK ${{ matrix.java }} on ${{ matrix.os }}
+        -   name: Build with Maven/JDK ${{ matrix.build-java }} on ${{ matrix.os }}, tests forked onto JDK ${{ matrix.java }}
             shell: bash
-            run: ./mvnw --batch-mode --file pom.xml clean verify
+            run: ./mvnw --batch-mode --file pom.xml -Dtest.jdk=${{ matrix.java }} clean verify
 
     deploy:
         needs: build

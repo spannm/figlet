@@ -564,6 +564,31 @@
         </profile>
 
         <profile>
+            <id>toolchain-tests</id>
+            <!-- fork the test JVM onto the JDK toolchain given by test.jdk, to verify the releaseJavaVersion
+                 bytecode at runtime on older JDKs while the build itself needs JDK 21. Requires that
+                 JDK registered in ~/.m2/toolchains.xml (see ci.yml). Usage: mvn -Dtest.jdk=11 clean verify -->
+            <activation>
+                <property>
+                    <name>test.jdk</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <jdkToolchain>
+                                <version>${test.jdk}</version>
+                            </jdkToolchain>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
             <!-- Activated for release:prepare and release:perform goals -->
             <id>release</id>
 
