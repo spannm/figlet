@@ -1,0 +1,255 @@
+:root {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #59636e;
+    --accent: #0969da;
+    --art: #1f2328;
+    --code-bg: #f0f3f6;
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #0d1117;
+        --surface: #151b23;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #9198a1;
+        --accent: #58a6ff;
+        --art: #c9d1d9;
+        --code-bg: #0b0f17;
+        color-scheme: dark;
+    }
+}
+
+:root[data-theme="dark"] {
+    --bg: #0d1117;
+    --surface: #151b23;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --accent: #58a6ff;
+    --art: #c9d1d9;
+    --code-bg: #0b0f17;
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+a {
+    color: var(--accent);
+}
+
+.wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+pre, code {
+    font-family: "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.art {
+    margin: 0;
+    color: var(--art);
+    line-height: 1;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.hero {
+    margin-bottom: 24px;
+}
+
+.hero-art {
+    /* scales with the viewport instead of scrolling, so glyphs may reach past the box */
+    overflow: visible;
+    padding: 4px 0;
+    font-size: clamp(7px, 1.6vw, 15px);
+    line-height: 1.15;
+    color: var(--accent);
+}
+
+h1 {
+    margin: 16px 0 8px;
+    font-size: 2rem;
+    line-height: 1.2;
+}
+
+h2 {
+    margin: 32px 0 12px;
+    font-size: 1.25rem;
+}
+
+.hero p, .lead {
+    max-width: 75ch;
+    color: var(--muted);
+}
+
+.controls {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 0;
+    background: var(--bg);
+}
+
+.controls input, .controls select {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+
+.controls input {
+    flex: 1 1 240px;
+}
+
+#count {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 12px;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+}
+
+/* display: flex above would otherwise override the hidden attribute */
+.card[hidden] {
+    display: none;
+}
+
+.card:hover, .card:focus-visible {
+    border-color: var(--accent);
+}
+
+.card .art {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 90px;
+    overflow: hidden;
+    font-size: 10px;
+}
+
+.card-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.card-meta {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.crumbs {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+section .art, .big {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    font-size: 12px;
+}
+
+.big {
+    font-size: 14px;
+}
+
+.facts {
+    border-collapse: collapse;
+}
+
+.facts th, .facts td {
+    padding: 6px 16px 6px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.facts th {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.code, .comment {
+    position: relative;
+    margin: 0 0 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--code-bg);
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-x: auto;
+}
+
+.comment {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+}
+
+.copy {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--muted);
+    font: 12px system-ui, sans-serif;
+    cursor: pointer;
+}
+
+.pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 32px;
+}
+
+footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+}
