@@ -218,7 +218,9 @@ The [markup DSL](#markup-dsl) is described below.
 
 ## Fonts
 
-Browse every available font with the `list-fonts` goal, and add `-Dfiglet.sample=true` to render a live sample of each one:
+All fonts can be browsed online in the [font gallery](https://spannm.github.io/figlet/), with a sample, the character set and usage snippets for each font.
+
+Locally, the `list-fonts` goal lists every available font, and `-Dfiglet.sample=true` renders a sample of each one:
 
 ```bash
 mvn io.github.spannm:figlet-maven-plugin:list-fonts -Dfiglet.sample=true

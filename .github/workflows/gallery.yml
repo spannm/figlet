@@ -1,0 +1,75 @@
+name: Font Gallery
+
+on:
+    push:
+        branches:
+        - master
+        paths:
+        - 'gallery/**'
+        - 'figlet4j/src/main/**'
+        - 'figlet-fonts-figletorg/**'
+        - 'figlet-fonts-xero/**'
+        - '.github/workflows/gallery.yml'
+    # regenerate on release so the snippets show the new version
+    release:
+        types: [published]
+    workflow_dispatch: {}
+
+# never cancel a running deployment, but let the latest run win
+concurrency:
+    group: pages
+    cancel-in-progress: false
+
+permissions:
+    contents: read
+
+jobs:
+
+    build:
+        runs-on: ubuntu-latest
+        steps:
+        -   name: Check out repository (incl. font submodules and tags)
+            uses: actions/checkout@v7
+            with:
+                submodules: recursive
+                # full history so that git describe finds the latest release tag
+                fetch-depth: 0
+
+        -   name: Set up JDK 21
+            uses: actions/setup-java@v6
+            with:
+                java-version: '21'
+                distribution: 'temurin'
+                cache: maven
+
+        -   name: Compile figlet4j and the font modules
+            run: ./mvnw --batch-mode --activate-profiles fast --projects figlet4j,figlet-fonts-figletorg,figlet-fonts-xero --also-make compile
+
+        -   name: Generate the gallery
+            run: |
+                set -euo pipefail
+                tag=$(git describe --tags --abbrev=0 --match 'figlet-*')
+                java -cp figlet4j/target/classes:figlet-fonts-figletorg/target/classes:figlet-fonts-xero/target/classes \
+                    gallery/src/main/java/io/github/spannm/figlet/gallery/FontGallery.java \
+                    target/gallery "${tag#figlet-}" figlet-fonts-figletorg/target/classes/fonts
+
+        -   name: Upload the gallery as Pages artifact
+            uses: actions/upload-pages-artifact@v5
+            with:
+                path: target/gallery
+
+    deploy:
+        needs: build
+        # forks have no Pages site of this repository to deploy to
+        if: ${{ github.repository == 'spannm/figlet' }}
+        runs-on: ubuntu-latest
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+        -   name: Deploy to GitHub Pages
+            id: deployment
+            uses: actions/deploy-pages@v5
