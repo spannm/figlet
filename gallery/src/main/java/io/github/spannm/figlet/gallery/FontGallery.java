@@ -43,6 +43,9 @@ public class FontGallery {
     private static final String REPO_URL   = "https://github.com/spannm/figlet";
     private static final Path   STATIC_DIR = Path.of("gallery", "static");
 
+    /** Ownership token of the site in Google Search Console, checked on the index page. */
+    private static final String GOOGLE_SITE_VERIFICATION = "kB0tdBbVe-ncxB9gVPQ2NDp5lGiEXsQmbSIClxNNmms";
+
     /** Output width large enough that no sample wraps. */
     private static final int          NO_WRAP_WIDTH = 10_000;
     private static final String       TITLE_FONT    = "standard";
@@ -235,7 +238,8 @@ public class FontGallery {
             esc(render(FigletFontRegistry.loadFont(TITLE_FONT), TITLE_TEXT)), entries.size(), REPO_URL, defaultCount, esc(version),
             DEFAULT_PACK, XERO_PACK, cards);
 
-        String jsonLd = String.format("""
+        String head = String.format("""
+            <meta name="google-site-verification" content="%s">
             <script type="application/ld+json">
             {
                 "@context": "https://schema.org",
@@ -247,12 +251,12 @@ public class FontGallery {
                 "license": "https://www.apache.org/licenses/LICENSE-2.0",
                 "version": "%s"
             }
-            </script>""", REPO_URL, esc(version));
+            </script>""", GOOGLE_SITE_VERIFICATION, REPO_URL, esc(version));
 
         String description = String.format("""
             Preview all %d FIGlet and TOIlet fonts that come with figlet4j, the pure-Java FIGlet library and Maven plugin. \
             Search by name, compare samples and copy the Maven or Java snippet for each font.""", entries.size());
-        return page(String.format("FIGlet Font Gallery: %d ASCII Art Fonts for Java", entries.size()), description, BASE_URL, "", jsonLd, body);
+        return page(String.format("FIGlet Font Gallery: %d ASCII Art Fonts for Java", entries.size()), description, BASE_URL, "", head, body);
     }
 
     /**
