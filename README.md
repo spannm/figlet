@@ -29,7 +29,7 @@
 
 * **A huge font collection, built in** - 146 FIGfonts bundled by default, plus 400 more via the optional `figlet-fonts-xero` module, about 250 of them not in the default set.
 
-* **Maven-native** - `figlet-maven-plugin` prints a banner straight into your build log; it runs once per multi-module reactor, not once per module.
+* **Maven-native** - `figlet-maven-plugin` prints a banner straight into your build log; it runs once per multi-module reactor, not once per module. It can also write the banner to a file, such as the `banner.txt` of a Spring Boot application.
 
 * **Markup DSL** - mix several fonts and literal, unrendered text in a single banner, with Maven `${...}` property placeholder support.
 
@@ -164,11 +164,11 @@ The [markup DSL](#markup-dsl) is described below.
 
 ## Goals
 
-| Goal                | Default phase | Description                             |
-|---------------------|---------------|-----------------------------------------|
-| `figlet:render`     | `validate`    | Renders ASCII art to the build log      |
-| `figlet:list-fonts` | _(none)_      | Lists all available fonts with metadata |
-| `figlet:help`       | _(none)_      | Shows usage and credits                 |
+| Goal                | Default phase | Description                                  |
+|---------------------|---------------|----------------------------------------------|
+| `figlet:render`     | `validate`    | Renders ASCII art to the build log or a file |
+| `figlet:list-fonts` | _(none)_      | Lists all available fonts with metadata      |
+| `figlet:help`       | _(none)_      | Shows usage and credits                      |
 
 > **Note:** In a multi-module reactor build, `figlet:render` by default only executes
 > for the execution-root project (the module Maven was invoked on) and does nothing
@@ -185,6 +185,7 @@ The [markup DSL](#markup-dsl) is described below.
 | `width`             | `figlet.width`             | `72`                                      | Max output width; long lines wrap at word boundaries                                                                                |
 | `strict`            | `figlet.strict`            | `true`                                    | Fail if the content contains characters not supported by the font, or a `${...}` placeholder cannot be resolved                    |
 | `target`            | `figlet.target`            | `info`                                    | Where to write the banner: `info`, `debug`, `stdout`, or `stderr`                                                                  |
+| `outputFile`        | `figlet.outputFile`        | _(none)_                                  | Write the banner to this file (UTF-8) instead of the build log, e.g. a Spring Boot `banner.txt`; ignores `executionRootOnly`       |
 | `executionRootOnly` | `figlet.executionRootOnly` | `true`                                    | Only render for the execution-root project of a multi-module build                                                                  |
 | `skip`              | `figlet.skip`              | `false`                                   | Skip this goal entirely                                                                                                             |
 
@@ -215,6 +216,44 @@ The [markup DSL](#markup-dsl) is described below.
 - `<preserveWhitespace>...</preserveWhitespace>` - enclosed text is emitted verbatim (leading/trailing whitespace and blank lines kept), unlike plain text which is trimmed.
 - Everything else is literal text, printed as-is.
 - If `content` contains no `<figletFont>` tag at all, the whole (resolved) content is rendered as a single banner using `font`/`fontFile`, exactly as if it had been wrapped in one `<figletFont>` tag referencing that font.
+
+## Spring Boot banner
+
+Spring Boot prints the content of a `banner.txt` on the classpath at startup. Since version 1.2.0 the plugin can generate that file at build time, so the application needs no runtime dependency on figlet:
+
+```xml
+<plugin>
+  <groupId>io.github.spannm</groupId>
+  <artifactId>figlet-maven-plugin</artifactId>
+  <version>1.2.0</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>render</goal>
+      </goals>
+      <configuration>
+        <font>slant</font>
+        <content><![CDATA[
+          <figletFont>${project.name}</figletFont><lineBreak/>
+          <preserveWhitespace>  v${project.version}</preserveWhitespace>
+        ]]></content>
+        <outputFile>${project.build.outputDirectory}/banner.txt</outputFile>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+```
+
+The goal runs in the `validate` phase, before the resources are copied, so do not keep a `banner.txt` of your own in `src/main/resources`, it would overwrite the generated one. Placeholders are resolved by Maven at build time. A Spring placeholder such as `${application.version}` in plain text is left for Spring only with `strict` set to `false`, otherwise it fails the build as unresolved. In a multi-module build, configure the plugin in the POM of the Spring Boot module itself rather than in a shared parent, where every module would get a `banner.txt`. `executionRootOnly` does not apply with `outputFile`, so the file is written although that module is usually not the execution root.
+
+To render the banner at runtime instead, use figlet4j directly:
+
+```java
+SpringApplication app = new SpringApplication(MyApplication.class);
+app.setBanner((environment, sourceClass, out) ->
+    out.println(new FigletRenderer(FigletFontRegistry.loadFont("slant")).render("My App")));
+app.run(args);
+```
 
 ## Fonts
 

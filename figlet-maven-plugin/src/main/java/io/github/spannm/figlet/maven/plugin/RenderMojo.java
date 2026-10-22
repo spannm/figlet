@@ -14,7 +14,12 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -23,7 +28,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Renders text as ASCII art and prints it to the build log during the Maven lifecycle.
+ * Renders text as ASCII art and prints it to the build log during the Maven lifecycle,
+ * or writes it to a file such as the {@code banner.txt} of a Spring Boot application.
  * <p>
  * {@code content} may contain Maven property placeholders in the form
  * {@code ${property.name}} (e.g. {@code ${project.name}}) and, optionally, the
@@ -80,6 +86,20 @@ import java.util.regex.Pattern;
  * artifact). Set {@code executionRootOnly} to {@code false} — typically
  * overridden in a specific module's own {@code <configuration>}, not
  * globally in the parent — to render there too.
+ *
+ * <h2>Writing to a file</h2>
+ * With {@code outputFile} set, the banner is written to that file instead of
+ * the build log, e.g. as Spring Boot banner that needs no runtime dependency:
+ * <pre>{@code
+ * <configuration>
+ *   <content>${project.name}</content>
+ *   <outputFile>${project.build.outputDirectory}/banner.txt</outputFile>
+ * </configuration>
+ * }</pre>
+ * In a multi-module build, configure this in the module that needs the file,
+ * such as the Spring Boot application, not in a shared parent POM.
+ * {@code executionRootOnly} does not apply then, as that module is usually not
+ * the execution root and a file per module is no duplicate in the build log.
  *
  * @since 1.0.0
  */
@@ -141,10 +161,21 @@ public class RenderMojo extends AbstractFontMojo {
     private String               parmTarget;
 
     /**
+     * File to write the ASCII art banner to, in UTF-8, instead of the build log.<br>
+     * Missing parent directories are created, an existing file is overwritten.
+     *
+     * @since 1.2.0
+     */
+    @Parameter(property = "figlet.outputFile",
+        alias = "outputFile")
+    private File                 parmOutputFile;
+
+    /**
      * When {@code true} (the default), this goal only runs for the
      * execution-root project and is a no-op in every other reactor module —
      * see the class Javadoc for why. Set to {@code false} in a module that
-     * should render its own banner regardless of reactor position.
+     * should render its own banner regardless of reactor position.<br>
+     * Ignored when {@code outputFile} is set.
      */
     @Parameter(property = "figlet.executionRootOnly",
         defaultValue = "true",
@@ -161,7 +192,7 @@ public class RenderMojo extends AbstractFontMojo {
 
     @Override
     protected void executeImpl() throws MojoExecutionException, MojoFailureException {
-        if (parmExecutionRootOnly && !parmProject.isExecutionRoot()) {
+        if (parmOutputFile == null && parmExecutionRootOnly && !parmProject.isExecutionRoot()) {
             getLog().debug("Skipping figlet rendering: project is not the execution root "
                 + "(set executionRootOnly=false to render in this module too)");
             return;
@@ -214,9 +245,34 @@ public class RenderMojo extends AbstractFontMojo {
         }
 
         int lineCount = renderedText.split("\n", -1).length;
+        if (parmOutputFile != null) {
+            writeToFile(renderedText, parmOutputFile.toPath());
+            getLog().info(String.format("Wrote banner (%d line(s)) to %s", lineCount, parmOutputFile));
+            return;
+        }
         getLog().debug(String.format("Rendered banner (%d line(s)), writing to target '%s'", lineCount, parmTarget));
 
         doOutput(renderedText, OutputTarget.of(parmTarget));
+    }
+
+    /**
+     * Writes the banner to a file in UTF-8, terminated by a line break, creating missing parent directories.
+     *
+     * @param banner the rendered banner
+     * @param file   the file to write
+     * @throws MojoExecutionException if the file cannot be written
+     */
+    static void writeToFile(String banner, Path file) throws MojoExecutionException {
+        String text = banner.endsWith("\n") ? banner : banner + "\n";
+        try {
+            Path parent = file.toAbsolutePath().getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            Files.writeString(file, text, StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new MojoExecutionException(String.format("Failed to write banner to %s: %s", file, ex.getMessage()), ex);
+        }
     }
 
     /**

@@ -1,0 +1,19 @@
+import java.io.File;
+import java.util.jar.JarFile;
+
+File banner = new File(basedir, "target/classes/banner.txt");
+if (!banner.isFile() || banner.length() == 0) {
+    throw new RuntimeException("Expected a non-empty banner file: " + banner);
+}
+
+// the banner is written before process-resources, so it must survive into the jar
+JarFile jar = new JarFile(new File(basedir, "target/output-file-it-1.0.0.jar"));
+try {
+    if (jar.getEntry("banner.txt") == null) {
+        throw new RuntimeException("Expected banner.txt in the packaged jar");
+    }
+} finally {
+    jar.close();
+}
+
+return true;

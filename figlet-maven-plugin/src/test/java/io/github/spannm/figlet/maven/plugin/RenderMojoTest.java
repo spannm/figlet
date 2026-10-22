@@ -9,10 +9,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import io.github.spannm.figlet4j.FigletFontRegistry;
 import io.github.spannm.figlet4j.FigletRenderer;
 import org.apache.maven.model.Model;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
@@ -20,6 +22,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
 
 /**
@@ -232,6 +236,50 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
         mojo.execute();
 
         assertThat(log.infoMessages).isNotEmpty();
+    }
+
+    @Test
+    void execute_outputFile_writesBannerInsteadOfLog(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("classes/banner.txt");
+        setField(mojo, "parmOutputFile", file.toFile());
+        setField(mojo, "parmContent", "Hi");
+
+        mojo.execute();
+
+        String expected = new FigletRenderer(FigletFontRegistry.loadFont("standard")).withWidth(200).render("Hi");
+        assertThat(file).content(UTF_8).isEqualTo(expected.endsWith("\n") ? expected : expected + "\n");
+        assertThat(log.infoMessages).singleElement().asString().startsWith("Wrote banner").endsWith(file.toString());
+    }
+
+    @Test
+    void execute_outputFileNotExecutionRoot_writesBanner(@TempDir Path dir) throws Exception {
+        MavenProject project = (MavenProject) getField(mojo, "parmProject");
+        project.setExecutionRoot(false);
+        Path file = dir.resolve("banner.txt");
+        setField(mojo, "parmOutputFile", file.toFile());
+        setField(mojo, "parmContent", "Hi");
+
+        mojo.execute();
+
+        assertThat(file).isNotEmptyFile();
+    }
+
+    @Test
+    void writeToFile_existingFile_overwritesIt(@TempDir Path dir) throws Exception {
+        Path file = Files.writeString(dir.resolve("banner.txt"), "old content that is longer\n");
+
+        RenderMojo.writeToFile("new", file);
+
+        assertThat(file).content(UTF_8).isEqualTo("new\n");
+    }
+
+    @Test
+    void writeToFile_parentIsFile_throwsMojoExecutionException(@TempDir Path dir) throws Exception {
+        Path parent = Files.writeString(dir.resolve("not-a-dir"), "");
+
+        assertThatThrownBy(() -> RenderMojo.writeToFile("banner", parent.resolve("banner.txt")))
+            .isInstanceOf(MojoExecutionException.class)
+            .hasMessageStartingWith("Failed to write banner to");
     }
 
     @Test
