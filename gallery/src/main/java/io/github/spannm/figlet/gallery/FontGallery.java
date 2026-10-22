@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -29,10 +30,11 @@ import java.util.stream.Stream;
  * <pre>
  * java -cp figlet4j/target/classes:figlet-fonts-figletorg/target/classes:figlet-fonts-xero/target/classes \
  *     gallery/src/main/java/io/github/spannm/figlet/gallery/FontGallery.java \
- *     target/gallery 1.1.0 figlet-fonts-figletorg/target/classes/fonts
+ *     target/gallery 1.1.0 figlet-fonts-figletorg/target/classes/fonts 2026-10-13
  * </pre>
  * The arguments are the output directory, the released version shown in the
- * snippets, and the font directory of the default font pack.
+ * snippets, the font directory of the default font pack, and the date of the
+ * last change to the content, which the sitemap reports to search engines.
  *
  * @author Markus Spann
  * @since 1.2.0
@@ -52,6 +54,7 @@ public class FontGallery {
     private static final String       TITLE_TEXT    = "figlet fonts";
     private static final String       SAMPLE_TEXT   = "Figlet4j";
     private static final List<String> CHARSET_LINES = List.of("ABCDEFGHIJKLM", "NOPQRSTUVWXYZ", "abcdefghijklm", "nopqrstuvwxyz", "0123456789");
+    private static final int          SIMILAR_COUNT = 6;
 
     private static final String DEFAULT_PACK = "figlet4j (default)";
     private static final String XERO_PACK    = "figlet-fonts-xero";
@@ -90,32 +93,35 @@ public class FontGallery {
     private final Path        outDir;
     private final String      version;
     private final Set<String> defaultPack;
+    private final LocalDate   lastModified;
 
     /**
      * Creates a gallery generator.
      *
-     * @param outDir      directory the site is written to
-     * @param version     released version shown in the snippets
-     * @param defaultPack lowercase names of the fonts in the default font pack
+     * @param outDir       directory the site is written to
+     * @param version      released version shown in the snippets
+     * @param defaultPack  lowercase names of the fonts in the default font pack
+     * @param lastModified date of the last change to the content
      */
-    FontGallery(Path outDir, String version, Set<String> defaultPack) {
+    FontGallery(Path outDir, String version, Set<String> defaultPack, LocalDate lastModified) {
         this.outDir = outDir;
         this.version = version;
         this.defaultPack = defaultPack;
+        this.lastModified = lastModified;
     }
 
     /**
      * Entry point, see the class Javadoc for the arguments.
      *
-     * @param args output directory, version and default font pack directory
+     * @param args output directory, version, default font pack directory and last modification date
      * @throws IOException if the site cannot be written
      */
     public static void main(String[] args) throws IOException {
-        if (args.length != 3) {
-            System.err.println("Usage: FontGallery <outDir> <version> <defaultFontDir>");
+        if (args.length != 4) {
+            System.err.println("Usage: FontGallery <outDir> <version> <defaultFontDir> <lastModified>");
             System.exit(2);
         }
-        new FontGallery(Path.of(args[0]), args[1], readFontNames(Path.of(args[2]))).generate();
+        new FontGallery(Path.of(args[0]), args[1], readFontNames(Path.of(args[2])), LocalDate.parse(args[3])).generate();
     }
 
     /**
@@ -147,9 +153,9 @@ public class FontGallery {
         for (int i = 0; i < entries.size(); i++) {
             Entry prev = i > 0 ? entries.get(i - 1) : null;
             Entry next = i < entries.size() - 1 ? entries.get(i + 1) : null;
-            write("fonts/" + entries.get(i).slug() + ".html", fontPage(entries.get(i), prev, next));
+            write("fonts/" + entries.get(i).slug() + ".html", fontPage(entries.get(i), similar(entries.get(i), entries), prev, next));
         }
-        write("sitemap.xml", sitemap(entries));
+        write("sitemap.xml", sitemap(entries, lastModified));
         write("robots.txt", String.format("""
             User-agent: *
             Allow: /
@@ -192,7 +198,8 @@ public class FontGallery {
                     slug = slug(name) + "-" + n;
                 }
                 boolean inDefaultPack = defaultPack.contains(name.toLowerCase(Locale.ROOT));
-                entries.add(new Entry(name, slug, type, inDefaultPack, font, FigletFontRegistry.listSpellingVariants(name)));
+                int width = render(font, SAMPLE_TEXT).lines().mapToInt(String::length).max().orElse(0);
+                entries.add(new Entry(name, slug, type, inDefaultPack, font, width, FigletFontRegistry.listSpellingVariants(name)));
             } catch (RuntimeException ex) {
                 System.err.printf("Skipping font %s: %s%n", name, ex);
             }
@@ -208,7 +215,7 @@ public class FontGallery {
      */
     String indexPage(List<Entry> entries) {
         long defaultCount = entries.stream().filter(Entry::inDefaultPack).count();
-        String cards = entries.stream().map(FontGallery::card).collect(Collectors.joining("\n"));
+        String cards = entries.stream().map(e -> card(e, "fonts/")).collect(Collectors.joining("\n"));
         String body = String.format("""
             <header class="hero">
                 <pre class="art hero-art" aria-hidden="true">%1$s</pre>
@@ -260,38 +267,40 @@ public class FontGallery {
     }
 
     /**
-     * Renders the index card of a font, showing the sample text rendered in the font.
+     * Renders the card of a font, showing the sample text rendered in the font.
      *
-     * @param e the font
+     * @param e   the font
+     * @param dir relative path from the linking page to the font pages
      * @return the card HTML
      */
-    static String card(Entry e) {
+    static String card(Entry e, String dir) {
         return String.format("""
-            <a class="card" href="fonts/%s.html" data-name="%s" data-pack="%s" data-type="%s">
+            <a class="card" href="%s%s.html" data-name="%s" data-pack="%s" data-type="%s">
                 <pre class="art fit" aria-hidden="true">%s</pre>
                 <span class="card-name">%s</span>
                 <span class="card-meta">.%s, %d lines, %s</span>
             </a>""",
-            e.slug(), esc(e.name().toLowerCase(Locale.ROOT)), e.inDefaultPack() ? "default" : "xero", e.type(),
+            dir, e.slug(), esc(e.name().toLowerCase(Locale.ROOT)), e.inDefaultPack() ? "default" : "xero", e.type(),
             esc(render(e.font(), SAMPLE_TEXT)), esc(e.name()), e.type(), e.font().getHeight(), e.packLabel());
     }
 
     /**
      * Renders the page of a single font.
      *
-     * @param e    the font
-     * @param prev previous font in name order, or {@code null}
-     * @param next next font in name order, or {@code null}
+     * @param e       the font
+     * @param similar fonts shown as similar ones
+     * @param prev    previous font in name order, or {@code null}
+     * @param next    next font in name order, or {@code null}
      * @return the page HTML
      */
-    String fontPage(Entry e, Entry prev, Entry next) {
+    String fontPage(Entry e, List<Entry> similar, Entry prev, Entry next) {
         FigletFont font = e.font();
         String charset = CHARSET_LINES.stream().map(s -> render(font, s)).collect(Collectors.joining("\n"));
         String body = String.format("""
             <nav class="crumbs"><a href="../">Font gallery</a> / %1$s</nav>
             <header>
-                <h1>%1$s</h1>
-                <p class="lead">%2$s font (.%3$s), %4$d lines high, included in %5$s.</p>
+                <h1>%1$s %2$s font</h1>
+                <p class="lead">ASCII art font (.%3$s), %4$d lines high, included in %5$s.</p>
             </header>
             <pre class="art big">%6$s</pre>
             <section>
@@ -305,15 +314,72 @@ public class FontGallery {
             %9$s
             %10$s
             %11$s
-            %12$s""",
+            %12$s
+            %13$s""",
             esc(e.name()), e.formatLabel(), e.type(), font.getHeight(), e.packLabel(),
             esc(render(font, e.name())), esc(render(font, SAMPLE_TEXT)), esc(charset),
-            details(e), usage(e), fontInfo(e), pager(prev, next));
+            details(e), usage(e), fontInfo(e), similarFonts(similar), pager(prev, next));
 
         String description = String.format("""
             Preview of the %s FIGlet font (.%s, %d lines high) with sample text and character set. \
             Use it in Java with figlet4j or in your Maven build with figlet-maven-plugin.""", e.name(), e.type(), font.getHeight());
-        return page(String.format("%s - FIGlet Font Preview", e.name()), description, BASE_URL + "fonts/" + e.slug() + ".html", "../", "", body);
+        String url = BASE_URL + "fonts/" + e.slug() + ".html";
+        String head = String.format("""
+            <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "Font gallery", "item": "%s"},
+                    {"@type": "ListItem", "position": 2, "name": %s, "item": "%s"}
+                ]
+            }
+            </script>""", BASE_URL, json(e.name()), url);
+        return page(String.format("%s %s Font - ASCII Art Preview", e.name(), e.formatLabel()), description, url, "../", head, body);
+    }
+
+    /**
+     * Picks the fonts shown as similar to a font: those sharing the most words of the name first,
+     * then those closest in height, with the same layout and closest in width. Each font is
+     * shown in one spelling only, and spellings of the font itself are left out.
+     *
+     * @param e       the font
+     * @param entries all fonts
+     * @return at most {@value #SIMILAR_COUNT} fonts
+     */
+    static List<Entry> similar(Entry e, List<Entry> entries) {
+        Set<String> words = e.words();
+        int height = e.font().getHeight();
+        Comparator<Entry> order = Comparator.<Entry> comparingLong(o -> -o.words().stream().filter(words::contains).count())
+            .thenComparingInt(o -> Math.abs(o.font().getHeight() - height))
+            .thenComparingInt(o -> o.layoutLabel().equals(e.layoutLabel()) ? 0 : 1)
+            .thenComparingInt(o -> Math.abs(o.width() - e.width()))
+            .thenComparing(Entry::name, String.CASE_INSENSITIVE_ORDER);
+        Set<String> keys = new HashSet<>(Set.of(e.key()));
+        return entries.stream()
+            .sorted(order)
+            .filter(o -> keys.add(o.key()))
+            .limit(SIMILAR_COUNT)
+            .toList();
+    }
+
+    /**
+     * Renders the cards of similar fonts.
+     *
+     * @param similar the similar fonts
+     * @return the section HTML, empty if there are none
+     */
+    static String similarFonts(List<Entry> similar) {
+        if (similar.isEmpty()) {
+            return "";
+        }
+        return String.format("""
+            <section>
+                <h2>Similar fonts</h2>
+                <div class="grid">
+                %s
+                </div>
+            </section>""", similar.stream().map(o -> card(o, "")).collect(Collectors.joining("\n")));
     }
 
     /**
@@ -450,13 +516,14 @@ public class FontGallery {
     /**
      * Builds the sitemap listing the index and all font pages.
      *
-     * @param entries all fonts
+     * @param entries      all fonts
+     * @param lastModified date of the last change to the content
      * @return the sitemap XML
      */
-    static String sitemap(List<Entry> entries) {
-        String today = LocalDate.now().toString();
+    static String sitemap(List<Entry> entries, LocalDate lastModified) {
+        String lastmod = lastModified.toString();
         String urls = entries.stream()
-            .map(e -> String.format("    <url><loc>%sfonts/%s.html</loc><lastmod>%s</lastmod></url>", BASE_URL, e.slug(), today))
+            .map(e -> String.format("    <url><loc>%sfonts/%s.html</loc><lastmod>%s</lastmod></url>", BASE_URL, e.slug(), lastmod))
             .collect(Collectors.joining("\n"));
         return String.format("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -464,7 +531,7 @@ public class FontGallery {
                 <url><loc>%1$s</loc><lastmod>%2$s</lastmod></url>
             %3$s
             </urlset>
-            """, BASE_URL, today, urls);
+            """, BASE_URL, lastmod, urls);
     }
 
     /**
@@ -514,6 +581,26 @@ public class FontGallery {
     }
 
     /**
+     * Quotes text as a JSON string that is safe to embed in a script element.
+     *
+     * @param s text to quote
+     * @return the JSON string literal
+     */
+    static String json(String s) {
+        StringBuilder sb = new StringBuilder(s.length() + 2).append('"');
+        s.chars().forEach(c -> {
+            if (c == '"' || c == '\\') {
+                sb.append('\\').append((char) c);
+            } else if (c < 0x20 || c == '<' || c == '>' || c == '&') {
+                sb.append(String.format("\\u%04x", c));
+            } else {
+                sb.append((char) c);
+            }
+        });
+        return sb.append('"').toString();
+    }
+
+    /**
      * Writes a file below the output directory.
      *
      * @param relPath path relative to the output directory
@@ -535,9 +622,10 @@ public class FontGallery {
      * @param type          file extension, {@code flf} or {@code tlf}
      * @param inDefaultPack whether the font comes with figlet4j
      * @param font          the loaded font
+     * @param width         width of the sample text rendered in the font
      * @param variants      other spellings of the name
      */
-    record Entry(String name, String slug, String type, boolean inDefaultPack, FigletFont font, List<String> variants) {
+    record Entry(String name, String slug, String type, boolean inDefaultPack, FigletFont font, int width, List<String> variants) {
 
         /**
          * Returns the name of the font pack providing this font.
@@ -555,6 +643,28 @@ public class FontGallery {
          */
         String formatLabel() {
             return "tlf".equals(type) ? "TOIlet" : "FIGlet";
+        }
+
+        /**
+         * Returns the words of at least three letters in the name, other than "font", which
+         * relate fonts such as "amc razor" and "amc slash" or "slant" and "small slant".
+         *
+         * @return the lowercase words
+         */
+        Set<String> words() {
+            return Stream.of(name.toLowerCase(Locale.ROOT).split("[^a-z]+"))
+                .filter(w -> w.length() >= 3 && !"font".equals(w))
+                .collect(Collectors.toSet());
+        }
+
+        /**
+         * Returns the name reduced to lowercase letters and digits, which is the same for
+         * spellings of one font such as "amc3line" and "AMC 3 Line".
+         *
+         * @return the comparison key
+         */
+        String key() {
+            return name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
         }
 
         /**

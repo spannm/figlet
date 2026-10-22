@@ -53,15 +53,17 @@
             el.addEventListener('input', filter);
         });
         filter();
-
-        var timer;
-        window.addEventListener('resize', function () {
-            clearTimeout(timer);
-            timer = setTimeout(function () {
-                fitPreviews(true);
-            }, 150);
-        });
+    } else {
+        fitPreviews(false);
     }
+
+    var timer;
+    window.addEventListener('resize', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+            fitPreviews(true);
+        }, 150);
+    });
 
     document.querySelectorAll('pre.code').forEach(function (pre) {
         if (!navigator.clipboard) {

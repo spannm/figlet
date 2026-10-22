@@ -49,9 +49,13 @@ jobs:
             run: |
                 set -euo pipefail
                 tag=$(git describe --tags --abbrev=0 --match 'figlet-*')
+                # the content changes with the fonts, the generator and the version shown in the snippets
+                lastmod=$({ git log -1 --format=%cs "$tag"
+                            git log -1 --format=%cs -- gallery figlet4j/src/main figlet-fonts-figletorg figlet-fonts-xero
+                          } | sort | tail -n 1)
                 java -cp figlet4j/target/classes:figlet-fonts-figletorg/target/classes:figlet-fonts-xero/target/classes \
                     gallery/src/main/java/io/github/spannm/figlet/gallery/FontGallery.java \
-                    target/gallery "${tag#figlet-}" figlet-fonts-figletorg/target/classes/fonts
+                    target/gallery "${tag#figlet-}" figlet-fonts-figletorg/target/classes/fonts "$lastmod"
 
         -   name: Upload the gallery as Pages artifact
             uses: actions/upload-pages-artifact@v5

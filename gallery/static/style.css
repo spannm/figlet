@@ -163,6 +163,10 @@ h2 {
     min-height: 90px;
     overflow: hidden;
     font-size: 10px;
+    /* undo the framing of section .art for cards of similar fonts */
+    padding: 0;
+    border: 0;
+    background: none;
 }
 
 .card-name {
