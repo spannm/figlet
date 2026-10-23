@@ -3,6 +3,8 @@ package io.github.spannm.figlet4j;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
@@ -30,7 +32,8 @@ import java.util.function.Function;
  *   <li>{@code FONT} nodes are rendered via an internal {@link FigletRenderer}
  *       for the resolved font (or the {@link #withDefaultFont(FigletFont) default font}
  *       if the node has no font name), using this renderer's {@link #getWidth() width}
- *       and {@link #isStrict() strict} settings. Rendered banners always end in
+ *       and {@link #isStrict() strict} settings, and its
+ *       {@link #withUnsupportedHandler(BiConsumer) unsupported handler}. Rendered banners always end in
  *       a trailing {@code \n} (see {@link FigletRenderer#render(String)}), so
  *       content that follows automatically starts on a fresh line even without
  *       an explicit {@code <lineBreak/>}.</li>
@@ -45,10 +48,11 @@ import java.util.function.Function;
  */
 public final class FigletMarkupRenderer {
 
-    private final Function<String, FigletFont> fontResolver;
-    private FigletFont                         defaultFont;
-    private int                                width        = FigletRenderer.DEFAULT_WIDTH;
-    private boolean                            strict       = true;
+    private final Function<String, FigletFont>   fontResolver;
+    private FigletFont                           defaultFont;
+    private int                                  width              = FigletRenderer.DEFAULT_WIDTH;
+    private boolean                              strict             = true;
+    private BiConsumer<FigletFont, Set<Integer>> unsupportedHandler = (font, codepoints) -> { };
 
     /**
      * Constructs a markup renderer.
@@ -121,6 +125,20 @@ public final class FigletMarkupRenderer {
      */
     public FigletMarkupRenderer setStrict(boolean strict) {
         this.strict = strict;
+        return this;
+    }
+
+    /**
+     * Sets a handler that is called in lenient mode for every {@code FONT} node
+     * containing characters its font cannot render, mirroring
+     * {@link FigletRenderer#withUnsupportedHandler(BiConsumer)}.
+     *
+     * @param handler the handler; must not be {@code null}
+     * @return this renderer for fluent chaining
+     * @since 1.2.0
+     */
+    public FigletMarkupRenderer withUnsupportedHandler(BiConsumer<FigletFont, Set<Integer>> handler) {
+        this.unsupportedHandler = requireNonNull(handler, "handler");
         return this;
     }
 
@@ -199,14 +217,18 @@ public final class FigletMarkupRenderer {
     }
 
     /**
-     * Renders {@code text} with {@code font} using this renderer's width and strict settings.
+     * Renders {@code text} with {@code font} using this renderer's width, strict and handler settings.
      *
      * @param font the font to render with
      * @param text the text to render
      * @return the rendered banner
      */
     private String renderWith(FigletFont font, String text) {
-        return new FigletRenderer(font).withWidth(width).setStrict(strict).render(text);
+        return new FigletRenderer(font)
+            .withWidth(width)
+            .setStrict(strict)
+            .withUnsupportedHandler(unsupportedHandler)
+            .render(text);
     }
 
 }

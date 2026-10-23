@@ -5,6 +5,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.function.BiConsumer;
 
 /**
  * Renders a string of text as multi-line ASCII art using a {@link FigletFont}.
@@ -50,9 +53,11 @@ import java.util.List;
  * in reading order. The output is not right-justified.
  *
  * <h2>Unsupported characters (fail-fast)</h2>
- * By default, any code point not present in the font causes a
- * {@link FigletException}. Set {@link #setStrict(boolean) strict=false} to
- * replace unknown code points with {@code '?'} instead.
+ * By default, any code point the font cannot render (see
+ * {@link FigletFont#supportsCodepoint(int)}) causes a {@link FigletException}
+ * naming all such characters. Set {@link #setStrict(boolean) strict=false} to
+ * replace them with {@code '?'} instead, and register a handler with
+ * {@link #withUnsupportedHandler(BiConsumer)} to be told about them.
  *
  * @author Markus Spann
  * @since 1.0.0
@@ -68,6 +73,8 @@ public final class FigletRenderer {
     private final FigletFont font;
     private int              width         = DEFAULT_WIDTH;
     private boolean          strict        = true;
+
+    private BiConsumer<FigletFont, Set<Integer>> unsupportedHandler = (font, codepoints) -> { };
 
     /**
      * Constructs a renderer for the given font.
@@ -126,6 +133,22 @@ public final class FigletRenderer {
     }
 
     /**
+     * Sets a handler that is called in lenient mode ({@link #isStrict()} {@code == false})
+     * when the text to render contains characters the font cannot render, before they
+     * are replaced by {@code '?'}. Use it to warn about an incomplete banner.
+     * The handler receives the font and the unsupported code points in order of
+     * their first occurrence. It is not called in strict mode, which throws instead.
+     *
+     * @param handler the handler; must not be {@code null}
+     * @return this renderer for fluent chaining
+     * @since 1.2.0
+     */
+    public FigletRenderer withUnsupportedHandler(BiConsumer<FigletFont, Set<Integer>> handler) {
+        this.unsupportedHandler = requireNonNull(handler, "handler");
+        return this;
+    }
+
+    /**
      * Renders {@code text} as ASCII art.
      * <p>
      * Each logical input line (separated by {@code \n}) is rendered independently.
@@ -136,7 +159,7 @@ public final class FigletRenderer {
      * @return multi-line ASCII art string with lines separated by {@code \n};
      *         returns an empty string for empty input
      * @throws FigletException      if {@link #isStrict()} is active and the text contains
-     *                              a character not present in the font
+     *                              characters the font cannot render
      * @throws NullPointerException if {@code text} is {@code null}
      */
     public String render(String text) {
@@ -146,9 +169,16 @@ public final class FigletRenderer {
             return "";
         }
 
-        // pre-validate in strict mode before any output is produced
-        if (strict) {
-            validateCodepoints(text);
+        // check before any output is produced
+        Set<Integer> unsupported = font.findUnsupportedCodepoints(text);
+        if (!unsupported.isEmpty()) {
+            if (strict) {
+                throw new FigletException(String.format(
+                    "%s not supported by font '%s'. "
+                    + "Use a different font, or set strict=false to replace unsupported characters.",
+                    describeUnsupported(unsupported), font.getName()));
+            }
+            unsupportedHandler.accept(font, unsupported);
         }
 
         StringBuilder out = new StringBuilder();
@@ -160,24 +190,31 @@ public final class FigletRenderer {
     }
 
     /**
-     * Validates that every code point in {@code text} is supported by the font.
+     * Describes unsupported code points for an error message, e.g.
+     * {@code Characters 'ä' (U+00E4), '€' (U+20AC) are}.
      *
-     * @param text the text to validate
-     * @throws FigletException at the first unsupported code point
+     * @param codepoints the unsupported code points, not empty
+     * @return subject and verb of the error message
      */
-    private void validateCodepoints(String text) {
-        text.codePoints().forEach(cp -> {
-            if (cp == '\n' || cp == '\r') {
-                return; // line breaks are structural, not rendered as glyphs
-            }
-            if (!font.supportsCodepoint(cp)) {
-                throw new FigletException(String.format(
-                    "Character '%s' (U+%04X) is not supported by font '%s'. "
-                    + "Use a different font, or set strict=false to replace unsupported characters.",
-                    cp < 32 ? String.format("\\u%04X", cp) : new String(Character.toChars(cp)),
-                    cp, font.getName()));
-            }
-        });
+    private static String describeUnsupported(Set<Integer> codepoints) {
+        StringJoiner joiner = new StringJoiner(", ");
+        codepoints.forEach(cp -> joiner.add(describeCodepoint(cp)));
+        return codepoints.size() == 1
+            ? String.format("Character %s is", joiner)
+            : String.format("Characters %s are", joiner);
+    }
+
+    /**
+     * Describes a code point as the character in quotes followed by its
+     * Unicode notation, e.g. {@code 'ä' (U+00E4)}. Control characters are
+     * shown as Java escapes.
+     *
+     * @param cp Unicode code point
+     * @return the description
+     */
+    private static String describeCodepoint(int cp) {
+        String ch = Character.isISOControl(cp) ? String.format("\\u%04X", cp) : new String(Character.toChars(cp));
+        return String.format("'%s' (U+%04X)", ch, cp);
     }
 
     /**
@@ -488,14 +525,14 @@ public final class FigletRenderer {
      * In lenient mode ({@link #isStrict()} {@code == false}), unsupported code
      * points are mapped to the {@code '?'} glyph. In strict mode this method
      * should never be called with an unsupported code point because
-     * {@link #validateCodepoints} has already checked them; if it is nonetheless
+     * {@link #render(String)} has already checked them; if it is nonetheless
      * called, an empty glyph is returned, which the caller skips.
      * <p>
      * The returned array is the font's internal glyph and must not be modified.
      *
      * @param cp Unicode code point
      * @return glyph rows, or an empty glyph if unsupported and strict mode is active
-     *         (or if the font lacks a {@code '?'} glyph in lenient mode)
+     *         (or if the font cannot render {@code '?'} in lenient mode)
      */
     private char[][] resolveGlyph(int cp) {
         if (font.supportsCodepoint(cp)) {

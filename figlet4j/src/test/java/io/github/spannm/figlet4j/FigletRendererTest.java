@@ -9,9 +9,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Unit tests for {@link FigletRenderer}.
@@ -229,6 +231,75 @@ final class FigletRendererTest {
         // \n is structural, not a glyph — should never cause a strict-mode failure
         FigletRenderer renderer = new FigletRenderer(testFont).setStrict(true);
         assertThat(renderer.render("A\nB")).isNotEmpty();
+    }
+
+    @Test
+    void render_strictModeSeveralUnsupportedCharacters_messageListsAll() {
+        FigletRenderer renderer = new FigletRenderer(asymmetricFont);
+
+        assertThatThrownBy(() -> renderer.render("ACA\u00e4C"))
+            .isInstanceOf(FigletException.class)
+            .hasMessageStartingWith("Characters 'C' (U+0043), '\u00e4' (U+00E4) are not supported by font 'AsymmetricFont'.");
+    }
+
+    @Test
+    void render_strictModeEmptyGlyph_throws() {
+        Map<Integer, char[][]> chars = Map.of((int) 'A', GLYPH_A, 0xE4, new char[][] {{}, {}});
+        FigletRenderer renderer = new FigletRenderer(new FigletFont("NoUmlauts", '$', 2, 1, List.of(), chars));
+
+        assertThatThrownBy(() -> renderer.render("A\u00e4"))
+            .isInstanceOf(FigletException.class)
+            .hasMessageStartingWith("Character '\u00e4' (U+00E4) is not supported");
+    }
+
+    @Test
+    void render_lenientModeEmptyGlyph_replacedByQuestionMark() {
+        Map<Integer, char[][]> chars = Map.of((int) 'A', GLYPH_A, (int) '?', GLYPH_B, 0xE4, new char[][] {{}, {}});
+        FigletRenderer renderer = new FigletRenderer(new FigletFont("NoUmlauts", '$', 2, 1, List.of(), chars))
+            .setStrict(false);
+
+        assertThat(renderer.render("\u00e4")).isEqualTo(renderer.render("?"));
+    }
+
+    @Test
+    void withUnsupportedHandler_lenientMode_calledWithFontAndCodepoints() {
+        List<Object> calls = new ArrayList<>();
+        FigletRenderer renderer = new FigletRenderer(asymmetricFont)
+            .setStrict(false)
+            .withUnsupportedHandler((font, codepoints) -> calls.add(List.of(font, codepoints)));
+
+        renderer.render("ACA\u00e4C");
+
+        assertThat(calls).containsExactly(List.of(asymmetricFont, Set.of((int) 'C', 0xE4)));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "true,  AC",
+        "false, AB"
+    })
+    void withUnsupportedHandler_strictOrAllSupported_notCalled(boolean strict, String text) {
+        List<Object> calls = new ArrayList<>();
+        FigletRenderer renderer = new FigletRenderer(asymmetricFont)
+            .setStrict(strict)
+            .withUnsupportedHandler((font, codepoints) -> calls.add(codepoints));
+
+        try {
+            renderer.render(text);
+        } catch (FigletException ex) {
+            // expected in strict mode
+        }
+
+        assertThat(calls).isEmpty();
+    }
+
+    @Test
+    void withUnsupportedHandler_null_throwsNullPointerException() {
+        FigletRenderer renderer = new FigletRenderer(testFont);
+
+        assertThatThrownBy(() -> renderer.withUnsupportedHandler(null))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("handler");
     }
 
     @Test

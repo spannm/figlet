@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +140,18 @@ final class FigletMarkupRendererTest {
     void render_strictModeUnsupportedChar_shouldThrow() {
         assertThatThrownBy(() -> renderer.render("<figletFont name=\"roman\">\u00e9</figletFont>"))
             .isInstanceOf(FigletException.class);
+    }
+
+    @Test
+    void withUnsupportedHandler_lenientMode_calledPerFontNode() {
+        List<String> calls = new ArrayList<>();
+        new FigletMarkupRenderer(FONTS::get)
+            .setStrict(false)
+            .withUnsupportedHandler((font, codepoints) -> calls.add(font.getName() + codepoints))
+            .render("<figletFont name=\"roman\">\u00e9A</figletFont>text \u00e9"
+                + "<figletFont name=\"small\">B</figletFont><figletFont name=\"small\">\u20ac\u00e9</figletFont>");
+
+        assertThat(calls).containsExactly("roman[233]", "small[8364, 233]");
     }
 
     @Test
