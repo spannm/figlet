@@ -203,6 +203,28 @@ final class RenderMojoTest extends AbstractFigletMojoTestBase {
         assertThatCode(() -> mojo.execute()).doesNotThrowAnyException();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "A\u4e2dB\u20ac\u4e2d",
+        "<figletFont>A\u4e2dB\u20ac\u4e2d</figletFont>",
+        "<figletFont name=\"standard\">A\u4e2dB\u20ac\u4e2d</figletFont>"
+    })
+    void execute_strictFalseUnsupportedChars_warnsWithFontAndCharacters(String content) throws Exception {
+        setField(mojo, "parmContent", content);
+        mojo.execute();
+
+        assertThat(log.warnMessages).containsExactly(
+            "Font 'standard' cannot render 2 character(s), replaced by '?': '\u4e2d' (U+4E2D), '\u20ac' (U+20AC)");
+    }
+
+    @Test
+    void execute_strictFalseAllCharsSupported_noWarning() throws Exception {
+        setField(mojo, "parmContent", "Hi");
+        mojo.execute();
+
+        assertThat(log.warnMessages).isEmpty();
+    }
+
     @Test
     void execute_strictTrue_throwsForUnsupportedChar() {
         setField(mojo, "parmStrict", true);

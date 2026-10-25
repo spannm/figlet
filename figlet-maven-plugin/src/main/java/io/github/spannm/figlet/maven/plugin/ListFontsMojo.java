@@ -31,7 +31,7 @@ import java.util.stream.Stream;
  *   mvn figlet:list-fonts
  * </pre>
  * <p>
- * Show font metadata (author, date from comment block):
+ * Show font metadata (author, date from comment block, supported characters):
  * <pre>
  *   mvn figlet:list-fonts -Dfiglet.metadata=true
  * </pre>
@@ -69,7 +69,8 @@ public class ListFontsMojo extends AbstractFigletMojo {
     private int                 parmWidth;
 
     /**
-     * When {@code true}, loads every font and prints the full metadata comment block.
+     * When {@code true}, loads every font and prints the full metadata comment block
+     * and the characters the font can render.
      * This is slower but reveals author and date information embedded in each font.
      */
     @Parameter(property = FIGLET_METADATA, defaultValue = "false", alias = "metadata")
@@ -173,11 +174,6 @@ public class ListFontsMojo extends AbstractFigletMojo {
             FigletFont font = FigletFontRegistry.loadFont(name);
             List<String> commentLines = font.getComment();
 
-            if (commentLines.isEmpty()) {
-                getLog().info(String.format("  %3s. %-20s", counter, name));
-                return true;
-            }
-
             // find the real end by skipping trailing empty or whitespace-only lines
             int lastNonEmptyIndex = commentLines.size() - 1;
             while (lastNonEmptyIndex >= 0 && commentLines.get(lastNonEmptyIndex).trim().isEmpty()) {
@@ -202,6 +198,7 @@ public class ListFontsMojo extends AbstractFigletMojo {
                     getLog().info(String.format("  %-25s  %s", "", "[..]"));
                 }
             }
+            getLog().info(String.format("  %-25s  Characters: %s", "", font.getCharacterSummary()));
             return true;
 
         } catch (Exception ex) {

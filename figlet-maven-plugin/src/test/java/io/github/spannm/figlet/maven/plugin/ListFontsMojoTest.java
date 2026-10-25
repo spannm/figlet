@@ -92,6 +92,14 @@ final class ListFontsMojoTest extends AbstractFigletMojoTestBase {
     }
 
     @Test
+    void metadataTrue_includesSupportedCharacters() throws Exception {
+        setField(mojo, "parmMetadata", true);
+        mojo.execute();
+
+        assertThat(log.infoMessages).anyMatch(line -> line.endsWith("Characters: all of ASCII, Latin-1 Supplement, Latin Extended-A, plus \u02c7 \u02d8 \u02d9 \u02db \u02dd"));
+    }
+
+    @Test
     void metadataTrue_includesCommentContent() throws Exception {
         setField(mojo, "parmMetadata", true);
         mojo.execute();

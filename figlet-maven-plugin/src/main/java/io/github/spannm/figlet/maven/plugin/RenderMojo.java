@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -141,10 +143,10 @@ public class RenderMojo extends AbstractFontMojo {
 
     /**
      * When {@code true} (the default), the goal fails immediately if the input
-     * text contains a character not present in the selected font, or a
+     * text contains characters the selected font cannot render, or a
      * {@code ${...}} property placeholder cannot be resolved.<br>
-     * When {@code false}, unsupported characters are silently replaced by
-     * {@code '?'}, and unresolved placeholders are left as-is (with a warning logged).
+     * When {@code false}, unsupported characters are replaced by {@code '?'},
+     * and unresolved placeholders are left as-is, each with a warning logged.
      */
     @Parameter(property = "figlet.strict",
         defaultValue = "true",
@@ -227,7 +229,8 @@ public class RenderMojo extends AbstractFontMojo {
                 // font by name from the built-in registry, tags without a name use font/fontFile
                 FigletMarkupRenderer markupRenderer = new FigletMarkupRenderer(FigletFontRegistry::loadFont)
                     .withWidth(getWidth())
-                    .setStrict(parmStrict);
+                    .setStrict(parmStrict)
+                    .withUnsupportedHandler(this::warnUnsupported);
                 if (resolvedNodes.stream().anyMatch(n -> n.isFont() && n.fontName() == null)) {
                     markupRenderer.withDefaultFont(resolveFont());
                 }
@@ -238,7 +241,11 @@ public class RenderMojo extends AbstractFontMojo {
                 // referencing this goal's configured font/fontFile
                 FigletFont font = resolveFont();
                 String plainText = joinAsPlainText(resolvedNodes);
-                renderedText = new FigletRenderer(font).withWidth(getWidth()).setStrict(parmStrict).render(plainText);
+                renderedText = new FigletRenderer(font)
+                    .withWidth(getWidth())
+                    .setStrict(parmStrict)
+                    .withUnsupportedHandler(this::warnUnsupported)
+                    .render(plainText);
             }
         } catch (FigletException ex) {
             throw new MojoFailureException(String.format("Rendering failed: %s", ex.getMessage()), ex);
@@ -253,6 +260,23 @@ public class RenderMojo extends AbstractFontMojo {
         getLog().debug(String.format("Rendered banner (%d line(s)), writing to target '%s'", lineCount, parmTarget));
 
         doOutput(renderedText, OutputTarget.of(parmTarget));
+    }
+
+    /**
+     * Logs a warning that the banner is incomplete because {@code font} cannot
+     * render some characters of the text, which are replaced by {@code '?'}.
+     *
+     * @param font       the font used for rendering
+     * @param codepoints the unsupported code points, in order of first occurrence
+     */
+    private void warnUnsupported(FigletFont font, Set<Integer> codepoints) {
+        StringJoiner chars = new StringJoiner(", ");
+        for (int cp : codepoints) {
+            String ch = Character.isISOControl(cp) ? String.format("\\u%04X", cp) : new String(Character.toChars(cp));
+            chars.add(String.format("'%s' (U+%04X)", ch, cp));
+        }
+        getLog().warn(String.format("Font '%s' cannot render %d character(s), replaced by '?': %s",
+            font.getName(), codepoints.size(), chars));
     }
 
     /**
