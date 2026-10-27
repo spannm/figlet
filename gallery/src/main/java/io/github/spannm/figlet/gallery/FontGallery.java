@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -236,6 +238,7 @@ public class FontGallery {
                     <option value="flf">FIGfont (.flf)</option>
                     <option value="tlf">TOIlet (.tlf)</option>
                 </select>
+                <input id="text" type="text" placeholder="Only fonts that can render..." aria-label="Only fonts that can render this text" autocomplete="off">
                 <span id="count" aria-live="polite"></span>
             </div>
             <main class="grid">
@@ -275,13 +278,13 @@ public class FontGallery {
      */
     static String card(Entry e, String dir) {
         return String.format("""
-            <a class="card" href="%s%s.html" data-name="%s" data-pack="%s" data-type="%s">
+            <a class="card" href="%s%s.html" data-name="%s" data-pack="%s" data-type="%s" data-chars="%s">
                 <pre class="art fit" aria-hidden="true">%s</pre>
                 <span class="card-name">%s</span>
                 <span class="card-meta">.%s, %d lines, %s</span>
             </a>""",
             dir, e.slug(), esc(e.name().toLowerCase(Locale.ROOT)), e.inDefaultPack() ? "default" : "xero", e.type(),
-            esc(render(e.font(), SAMPLE_TEXT)), esc(e.name()), e.type(), e.font().getHeight(), e.packLabel());
+            codepointRanges(e.font().getSupportedCodepoints()), esc(render(e.font(), SAMPLE_TEXT)), esc(e.name()), e.type(), e.font().getHeight(), e.packLabel());
     }
 
     /**
@@ -315,10 +318,11 @@ public class FontGallery {
             %10$s
             %11$s
             %12$s
-            %13$s""",
+            %13$s
+            %14$s""",
             esc(e.name()), e.formatLabel(), e.type(), font.getHeight(), e.packLabel(),
             esc(render(font, e.name())), esc(render(font, SAMPLE_TEXT)), esc(charset),
-            details(e), usage(e), fontInfo(e), similarFonts(similar), pager(prev, next));
+            supportedCharacters(e), details(e), usage(e), fontInfo(e), similarFonts(similar), pager(prev, next));
 
         String description = String.format("""
             Preview of the %s FIGlet font (.%s, %d lines high) with sample text and character set. \
@@ -383,6 +387,64 @@ public class FontGallery {
     }
 
     /**
+     * Renders the characters the font can render, with a summary of them.
+     *
+     * @param e the font
+     * @return the section HTML
+     */
+    static String supportedCharacters(Entry e) {
+        SortedSet<Integer> supported = e.font().getSupportedCodepoints();
+        String chars = supported.stream()
+            .filter(cp -> cp > ' ' && !Character.isISOControl(cp))
+            .map(cp -> esc(Character.toString(cp)))
+            .collect(Collectors.joining(" "));
+        return String.format("""
+            <section>
+                <h2>Supported characters</h2>
+                <p>The font can render %d characters: %s.</p>
+                <p class="chars">%s</p>
+            </section>""", supported.size(), esc(e.font().getCharacterSummary()), chars);
+    }
+
+    /**
+     * Encodes code points as comma-separated hexadecimal ranges, e.g. {@code 20-7e,c4,d6},
+     * for the client-side filter by text.
+     *
+     * @param codepoints code points in ascending order
+     * @return the encoded ranges
+     */
+    static String codepointRanges(SortedSet<Integer> codepoints) {
+        StringJoiner ranges = new StringJoiner(",");
+        int start = -1;
+        int end = -1;
+        for (int cp : codepoints) {
+            if (cp != end + 1 && start >= 0) {
+                ranges.add(hexRange(start, end));
+                start = -1;
+            }
+            if (start < 0) {
+                start = cp;
+            }
+            end = cp;
+        }
+        if (start >= 0) {
+            ranges.add(hexRange(start, end));
+        }
+        return ranges.toString();
+    }
+
+    /**
+     * Formats a code point range in hexadecimal, as a single code point if it has only one.
+     *
+     * @param start first code point
+     * @param end   last code point
+     * @return the formatted range
+     */
+    private static String hexRange(int start, int end) {
+        return start == end ? Integer.toHexString(start) : Integer.toHexString(start) + "-" + Integer.toHexString(end);
+    }
+
+    /**
      * Renders the table of font properties.
      *
      * @param e the font
@@ -402,12 +464,12 @@ public class FontGallery {
                     <tr><th>Height</th><td>%d lines, baseline at %d</td></tr>
                     <tr><th>Layout</th><td>%s</td></tr>
                     <tr><th>Print direction</th><td>%s</td></tr>
-                    <tr><th>Glyphs</th><td>%d</td></tr>
+                    <tr><th>Characters</th><td>%d</td></tr>
                     %s
                 </table>
             </section>""",
             esc(e.name()), e.formatLabel(), e.type(), e.packLabel(), font.getHeight(), font.getBaseline(),
-            e.layoutLabel(), font.isRightToLeft() ? "right to left" : "left to right", font.getCharacters().size(), variants);
+            e.layoutLabel(), font.isRightToLeft() ? "right to left" : "left to right", font.getSupportedCodepoints().size(), variants);
     }
 
     /**

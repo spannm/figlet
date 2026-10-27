@@ -57,7 +57,7 @@ a {
     padding: 24px 16px 48px;
 }
 
-pre, code {
+pre, code, .chars {
     font-family: "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
@@ -121,6 +121,11 @@ h2 {
 
 .controls input {
     flex: 1 1 240px;
+}
+
+.chars {
+    overflow-wrap: anywhere;
+    word-spacing: 0.3em;
 }
 
 #count {

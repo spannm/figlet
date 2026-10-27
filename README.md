@@ -146,10 +146,17 @@ System.out.println(renderer.render("Hello World"));
 `FigletFontRegistry` finds fonts by name, case-insensitively, and caches them once parsed. A few more things the library can do:
 
 ```java
-// lenient mode prints '?' for characters the font lacks instead of failing
+// lenient mode prints '?' for characters the font lacks instead of failing,
+// and a handler can report them
 String banner = new FigletRenderer(FigletFontRegistry.loadFont("slant"))
     .setStrict(false)
+    .withUnsupportedHandler((font, codepoints) -> log.warn("Incomplete banner: {}", codepoints))
     .render("Hello, World!");
+
+// which characters a font can render, and which of a text it cannot
+FigletFont font = FigletFontRegistry.loadFont("slant");
+SortedSet<Integer> supported = font.getSupportedCodepoints();
+Set<Integer> missing = font.findUnsupportedCodepoints("Grüße");
 
 // fonts outside the classpath, loaded directly or registered under a name
 FigletFont custom = FigletFontLoader.loadFromFile(Path.of("fonts/myfont.flf"));
@@ -183,7 +190,7 @@ The [markup DSL](#markup-dsl) is described below.
 | `font`              | `figlet.font`              | `standard`                                | Name of a built-in font (see `figlet:list-fonts`)                                                                                   |
 | `fontFile`          | `figlet.fontFile`          | _(none)_                                  | Path to an external `.flf` or `.tlf` file; takes precedence over `font` when both are set                                          |
 | `width`             | `figlet.width`             | `72`                                      | Max output width; long lines wrap at word boundaries                                                                                |
-| `strict`            | `figlet.strict`            | `true`                                    | Fail if the content contains characters not supported by the font, or a `${...}` placeholder cannot be resolved                    |
+| `strict`            | `figlet.strict`            | `true`                                    | Fail if the content contains characters not supported by the font, or a `${...}` placeholder cannot be resolved. If `false`, both are logged as warnings |
 | `target`            | `figlet.target`            | `info`                                    | Where to write the banner: `info`, `debug`, `stdout`, or `stderr`                                                                  |
 | `outputFile`        | `figlet.outputFile`        | _(none)_                                  | Write the banner to this file (UTF-8) instead of the build log, e.g. a Spring Boot `banner.txt`; ignores `executionRootOnly`       |
 | `executionRootOnly` | `figlet.executionRootOnly` | `true`                                    | Only render for the execution-root project of a multi-module build                                                                  |
