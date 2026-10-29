@@ -1,8 +1,10 @@
 package io.github.spannm.figlet.maven.plugin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.spannm.figlet4j.FigletFontRegistry;
+import org.apache.maven.plugin.MojoFailureException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -145,6 +147,38 @@ final class ListFontsMojoTest extends AbstractFigletMojoTestBase {
             .filter(s -> s.trim().length() > 5)
             .count();
         assertThat(nonTrivialLines).isGreaterThan(10);
+    }
+
+    @Test
+    void sampleTrue_fontLacksCharacters_notesThemBelowSample() throws Exception {
+        setField(mojo, "parmPrintSample", true);
+        setField(mojo, "parmSampleText",  "a\u00f6\u20ac");
+        mojo.execute();
+
+        // standard renders the umlaut but not the euro sign
+        assertThat(log.infoMessages).contains("  [cannot render: '\u20ac' (U+20AC)]");
+    }
+
+    @Test
+    void strictTrue_sampleText_listsOnlyFontsThatCanRenderIt() throws Exception {
+        setField(mojo, "parmStrict",     true);
+        // DANC4 has umlauts but no space
+        setField(mojo, "parmSampleText", "Gr\u00f6\u00dfe 1");
+        mojo.execute();
+
+        assertThat(log.infoMessages)
+            .anyMatch(s -> s.matches("Fonts that can render \"Gr\u00f6\u00dfe 1\" \\(\\d+ of \\d+\\):"))
+            .anyMatch(s -> s.matches("\\s+\\d+\\. standard\\b.*"))
+            .noneMatch(s -> s.matches("\\s+\\d+\\. DANC4\\b.*"));
+    }
+
+    @Test
+    void strictTrue_noSampleText_fails() {
+        setField(mojo, "parmStrict", true);
+
+        assertThatThrownBy(() -> mojo.execute())
+            .isInstanceOf(MojoFailureException.class)
+            .hasMessageContaining("figlet.sampleText");
     }
 
     @Test

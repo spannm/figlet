@@ -6,6 +6,7 @@ import io.github.spannm.figlet4j.FigletException;
 import io.github.spannm.figlet4j.FigletFont;
 import io.github.spannm.figlet4j.FigletFontRegistry;
 import io.github.spannm.figlet4j.FigletRenderer;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
@@ -18,6 +19,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -41,6 +44,11 @@ import java.util.stream.Stream;
  *   mvn figlet:list-fonts -Dfiglet.sample=true
  *   mvn figlet:list-fonts -Dfiglet.sample=true -Dfiglet.sampleText=FIGlet
  * </pre>
+ * <p>
+ * List only the fonts that can render a text completely:
+ * <pre>
+ *   mvn figlet:list-fonts -Dfiglet.strict=true -Dfiglet.sampleText=Gr&ouml;&szlig;e
+ * </pre>
  *
  * @author Markus Spann
  * @since 1.0.0
@@ -55,6 +63,7 @@ public class ListFontsMojo extends AbstractFigletMojo {
     private static final String FIGLET_METADATA    = "figlet.metadata";
     private static final String FIGLET_SAMPLE      = "figlet.sample";
     private static final String FIGLET_SAMPLE_TEXT = "figlet.sampleText";
+    private static final String FIGLET_STRICT      = "figlet.strict";
 
     /**
      * Maximum sample rendering width in characters, used only when
@@ -93,32 +102,51 @@ public class ListFontsMojo extends AbstractFigletMojo {
     @Parameter(property = FIGLET_SAMPLE_TEXT, alias = "sampleText")
     private String              parmSampleText;
 
+    /**
+     * When {@code true}, lists only the fonts that can render {@code figlet.sampleText}
+     * completely, which must then be set. When {@code false} (the default), all fonts
+     * are listed, and a sample that misses characters is followed by a note naming them.
+     *
+     * @since 1.2.0
+     */
+    @Parameter(property = FIGLET_STRICT, defaultValue = "false", alias = "strict")
+    private boolean             parmStrict;
+
     int getWidth() {
         return parmWidth;
     }
 
     @Override
-    protected void executeImpl() {
-        NavigableSet<String> fontNames = FigletFontRegistry.listAllFonts();
+    protected void executeImpl() throws MojoFailureException {
+        boolean hasSampleText = parmSampleText != null && !parmSampleText.isBlank();
+        if (parmStrict && !hasSampleText) {
+            throw new MojoFailureException(String.format(
+                "%s=true lists the fonts that can render a text, set it with -D%s=...", FIGLET_STRICT, FIGLET_SAMPLE_TEXT));
+        }
 
-        if (fontNames.isEmpty()) {
+        NavigableSet<String> allFonts = FigletFontRegistry.listAllFonts();
+        if (allFonts.isEmpty()) {
             getLog().warn("No fonts found. Ensure that figlet4j is on the classpath.");
             return;
         }
+
+        NavigableSet<String> fontNames = parmStrict
+            ? allFonts.stream().filter(name -> canRender(name, parmSampleText)).collect(Collectors.toCollection(TreeSet::new))
+            : allFonts;
 
         getLog().debug(String.format("Listing %d font(s)%s%s", fontNames.size(),
             parmMetadata ? ", with metadata" : "",
             parmPrintSample ? String.format(", with samples (width=%d)", parmWidth) : ""));
 
-        String header = "Available fonts (" + fontNames.size() + " total):";
+        String header = parmStrict
+            ? String.format("Fonts that can render \"%s\" (%d of %d):", parmSampleText, fontNames.size(), allFonts.size())
+            : String.format("Available fonts (%d total):", fontNames.size());
 
         getLog().info("");
         getLog().info(header);
         getLog().info("=".repeat(header.length()));
 
-        String sampleText = parmSampleText != null && !parmSampleText.isBlank()
-            ? parmSampleText
-            : randomSampleText();
+        String sampleText = hasSampleText ? parmSampleText : randomSampleText();
 
         int counter      = 0;
         int failureCount = 0;
@@ -207,6 +235,22 @@ public class ListFontsMojo extends AbstractFigletMojo {
         }
     }
 
+    /**
+     * Returns whether a font can render a text completely. A font that cannot be
+     * loaded is kept, so that the failure is reported when it is listed.
+     *
+     * @param name font name
+     * @param text the text to render
+     * @return {@code true} if the font supports every character of {@code text} or fails to load
+     */
+    private static boolean canRender(String name, String text) {
+        try {
+            return FigletFontRegistry.loadFont(name).findUnsupportedCodepoints(text).isEmpty();
+        } catch (RuntimeException ex) {
+            return true;
+        }
+    }
+
     private boolean printSample(String name, String text) {
         try {
             FigletFont font = FigletFontRegistry.loadFont(name);
@@ -215,6 +259,10 @@ public class ListFontsMojo extends AbstractFigletMojo {
 
             for (String line : banner.split("\n", -1)) {
                 getLog().info("  " + line);
+            }
+            Set<Integer> unsupported = font.findUnsupportedCodepoints(text);
+            if (!unsupported.isEmpty()) {
+                getLog().info(String.format("  [cannot render: %s]", describeCodepoints(unsupported)));
             }
             return true;
 
@@ -228,10 +276,11 @@ public class ListFontsMojo extends AbstractFigletMojo {
     }
 
     /**
-     * Picks a varied, always-renderable fallback sample text for when
-     * {@code figlet.sampleText} is not set: the current weekday, the current month,
-     * the default locale's language or country (in English, to stay within the plain
-     * ASCII range every FIGfont supports), the current year, or a time-of-day greeting.
+     * Picks a varied fallback sample text for when {@code figlet.sampleText} is not
+     * set: the current weekday, the current month, the default locale's language or
+     * country (in English, to stay mostly within plain ASCII), the current year, or a
+     * time-of-day greeting. Some fonts lack digits or other characters of these; their
+     * samples are followed by a note naming the missing characters.
      *
      * @return a randomly chosen, non-blank sample text
      */

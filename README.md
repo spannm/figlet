@@ -198,13 +198,14 @@ The [markup DSL](#markup-dsl) is described below.
 
 ### `list-fonts` configuration
 
-| Parameter     | Property            | Default    | Description                                                              |
-|---------------|---------------------|------------|--------------------------------------------------------------------------|
-| `metadata`    | `figlet.metadata`   | `false`    | Load every font and print its metadata comment block (author, date, ...) |
-| `printSample` | `figlet.sample`     | `false`    | Render a short ASCII-art sample for every listed font                    |
-| `sampleText`  | `figlet.sampleText` | _(random)_ | Custom sample text; defaults to a varied, always-renderable fallback     |
-| `width`       | `figlet.width`      | `72`       | Max width of the samples; long lines wrap at word boundaries             |
-| `skip`        | `figlet.skip`       | `false`    | Skip this goal entirely                                                  |
+| Parameter     | Property            | Default    | Description                                                                                 |
+|---------------|---------------------|------------|---------------------------------------------------------------------------------------------|
+| `metadata`    | `figlet.metadata`   | `false`    | Load every font and print its metadata comment block (author, date, ...) and its characters |
+| `printSample` | `figlet.sample`     | `false`    | Render a short ASCII-art sample for every listed font                                       |
+| `sampleText`  | `figlet.sampleText` | _(random)_ | Custom sample text; defaults to a weekday, month, year or the like                          |
+| `strict`      | `figlet.strict`     | `false`    | List only the fonts that can render `sampleText` completely                                 |
+| `width`       | `figlet.width`      | `72`       | Max width of the samples; long lines wrap at word boundaries                                |
+| `skip`        | `figlet.skip`       | `false`    | Skip this goal entirely                                                                     |
 
 ## Markup DSL
 
@@ -271,6 +272,8 @@ Locally, the `list-fonts` goal lists every available font, and `-Dfiglet.sample=
 ```bash
 mvn io.github.spannm:figlet-maven-plugin:list-fonts -Dfiglet.sample=true
 ```
+
+A sample that misses characters is followed by a note naming them. With `-Dfiglet.strict=true -Dfiglet.sampleText=...`, only the fonts that can render the text completely are listed.
 
 In a project that declares the plugin in its POM, the short form `mvn figlet:list-fonts` works as well. Elsewhere Maven cannot resolve the `figlet` prefix, unless `io.github.spannm` is added to the `<pluginGroups>` in your `settings.xml`.
 

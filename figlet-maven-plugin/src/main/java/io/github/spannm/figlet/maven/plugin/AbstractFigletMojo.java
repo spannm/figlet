@@ -5,11 +5,15 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 
+import java.util.Collection;
+import java.util.StringJoiner;
+
 /**
  * Base class for all figlet-maven-plugin goals.
  * <p>
  * Deliberately holds only what applies to <em>every</em> goal — currently just
- * {@code skip} and the {@link #execute()} template method. Goal-specific
+ * {@code skip}, the {@link #execute()} template method and the description of
+ * unsupported characters shared by the rendering goals. Goal-specific
  * concerns (which font to load, output width, ...) live further down the
  * hierarchy in {@link AbstractFontMojo}, so that goals which don't need them
  * (e.g. {@code help}, {@code list-fonts}) don't inherit unrelated,
@@ -42,5 +46,22 @@ abstract class AbstractFigletMojo extends AbstractMojo {
 
     /** Subclasses implement their goal logic here. */
     protected abstract void executeImpl() throws MojoExecutionException, MojoFailureException;
+
+    /**
+     * Describes code points for a log message, each as the character in quotes
+     * followed by its Unicode notation, e.g. {@code 'ä' (U+00E4), '€' (U+20AC)}.
+     * Control characters are shown as Java escapes.
+     *
+     * @param codepoints the code points to describe
+     * @return the comma-separated descriptions
+     */
+    static String describeCodepoints(Collection<Integer> codepoints) {
+        StringJoiner joiner = new StringJoiner(", ");
+        for (int cp : codepoints) {
+            String ch = Character.isISOControl(cp) ? String.format("\\u%04X", cp) : new String(Character.toChars(cp));
+            joiner.add(String.format("'%s' (U+%04X)", ch, cp));
+        }
+        return joiner.toString();
+    }
 
 }

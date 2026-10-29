@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -270,13 +269,8 @@ public class RenderMojo extends AbstractFontMojo {
      * @param codepoints the unsupported code points, in order of first occurrence
      */
     private void warnUnsupported(FigletFont font, Set<Integer> codepoints) {
-        StringJoiner chars = new StringJoiner(", ");
-        for (int cp : codepoints) {
-            String ch = Character.isISOControl(cp) ? String.format("\\u%04X", cp) : new String(Character.toChars(cp));
-            chars.add(String.format("'%s' (U+%04X)", ch, cp));
-        }
         getLog().warn(String.format("Font '%s' cannot render %d character(s), replaced by '?': %s",
-            font.getName(), codepoints.size(), chars));
+            font.getName(), codepoints.size(), describeCodepoints(codepoints)));
     }
 
     /**
