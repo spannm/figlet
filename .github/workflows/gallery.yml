@@ -4,15 +4,15 @@ on:
     push:
         branches:
         - master
+        # a release changes the version in the font module POMs, so pushing the
+        # release commits regenerates the snippets with the new version. A
+        # release trigger would run on the tag, which may not deploy to Pages
         paths:
         - 'gallery/**'
         - 'figlet4j/src/main/**'
         - 'figlet-fonts-figletorg/**'
         - 'figlet-fonts-xero/**'
         - '.github/workflows/gallery.yml'
-    # regenerate on release so the snippets show the new version
-    release:
-        types: [published]
     workflow_dispatch: {}
 
 # never cancel a running deployment, but let the latest run win
