@@ -79,6 +79,25 @@ public class FontGallery {
           </executions>
         </plugin>""";
 
+    /** Plugin configuration that writes a Spring Boot banner.txt, formatted with the version and the font name. */
+    private static final String SPRING_BOOT_SNIPPET = """
+        <plugin>
+          <groupId>io.github.spannm</groupId>
+          <artifactId>figlet-maven-plugin</artifactId>
+          <version>%s</version>
+          <configuration>
+            <font>%s</font>
+            <outputFile>${project.build.outputDirectory}/banner.txt</outputFile>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>render</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>""";
+
     /** Java usage, formatted with the font name and the sample text. */
     private static final String JAVA_SNIPPET = """
         FigletFont font = FigletFontRegistry.loadFont("%s");
@@ -326,7 +345,7 @@ public class FontGallery {
 
         String description = String.format("""
             Preview of the %s FIGlet font (.%s, %d lines high) with sample text and character set. \
-            Use it in Java with figlet4j or in your Maven build with figlet-maven-plugin.""", e.name(), e.type(), font.getHeight());
+            Use it in Java with figlet4j, in your Maven build or as a Spring Boot banner.""", e.name(), e.type(), font.getHeight());
         String url = BASE_URL + "fonts/" + e.slug() + ".html";
         String head = String.format("""
             <script type="application/ld+json">
@@ -487,11 +506,15 @@ public class FontGallery {
                 <h2>Use it</h2>
                 <p>In the build log, with <a href="%1$s#installation">figlet-maven-plugin</a>, which includes all fonts:</p>
                 <pre class="code"><code>%2$s</code></pre>
-                <p>In Java, with <a href="%1$s#as-a-java-library-figlet4j">figlet4j</a>:</p>
+                <p>As a <a href="%1$s#spring-boot-banner">Spring Boot banner</a>: the plugin writes banner.txt at build time, \
+            so the application needs no runtime dependency on figlet:</p>
                 <pre class="code"><code>%3$s</code></pre>
-                %4$s
+                <p>In Java, with <a href="%1$s#as-a-java-library-figlet4j">figlet4j</a>:</p>
+                <pre class="code"><code>%4$s</code></pre>
+                %5$s
             </section>""",
-            REPO_URL, esc(String.format(PLUGIN_SNIPPET, version, e.name())), esc(String.format(JAVA_SNIPPET, e.name(), SAMPLE_TEXT)), xero);
+            REPO_URL, esc(String.format(PLUGIN_SNIPPET, version, e.name())), esc(String.format(SPRING_BOOT_SNIPPET, version, e.name())),
+            esc(String.format(JAVA_SNIPPET, e.name(), SAMPLE_TEXT)), xero);
     }
 
     /**
