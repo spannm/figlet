@@ -62,7 +62,7 @@ Add to your `pom.xml`:
 <plugin>
   <groupId>io.github.spannm</groupId>
   <artifactId>figlet-maven-plugin</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <executions>
     <execution>
       <goals>
@@ -78,7 +78,7 @@ The `<execution>` is required, otherwise the goal is never invoked. It binds to 
 Without further configuration, the project name is rendered in the `standard` font, followed by the version:
 
 ```
-[INFO] --- figlet:1.1.0:render (default) @ my-app ---
+[INFO] --- figlet:1.2.0:render (default) @ my-app ---
 [INFO]
 [INFO]
 [INFO]  _ __ ___  _   _        __ _ _ __  _ __
@@ -101,20 +101,20 @@ Use `<content>` and `<font>` in a `<configuration>` block to change what is rend
 <dependency>
   <groupId>io.github.spannm</groupId>
   <artifactId>figlet4j</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
 </dependency>
 ```
 
 **Gradle (Groovy / `build.gradle`)**
 
 ```groovy
-implementation 'io.github.spannm:figlet4j:1.1.0'
+implementation 'io.github.spannm:figlet4j:1.2.0'
 ```
 
 **Gradle (Kotlin DSL / `build.gradle.kts`)**
 
 ```kotlin
-implementation("io.github.spannm:figlet4j:1.1.0")
+implementation("io.github.spannm:figlet4j:1.2.0")
 ```
 
 `figlet4j` comes with the 146 figlet.org fonts. For the extended collection, add `figlet-fonts-xero` as well, its fonts are picked up from the classpath automatically:
@@ -123,7 +123,7 @@ implementation("io.github.spannm:figlet4j:1.1.0")
 <dependency>
   <groupId>io.github.spannm</groupId>
   <artifactId>figlet-fonts-xero</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
 </dependency>
 ```
 
@@ -164,7 +164,7 @@ FigletFontRegistry.registerExternal("myfont", Path.of("fonts/myfont.flf"));
 
 // several fonts and plain text in one banner, using the markup DSL
 String mixed = new FigletMarkupRenderer(FigletFontRegistry::loadFont)
-    .render("<figletFont name=\"small\">v1.1.0</figletFont><lineBreak/>built today");
+    .render("<figletFont name=\"small\">v1.2.0</figletFont><lineBreak/>built today");
 ```
 
 The [markup DSL](#markup-dsl) is described below.
