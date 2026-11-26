@@ -15,6 +15,12 @@
 <h1 align="center">figlet</h1>
 <h3 align="center">ASCII art banners for your Maven build</h3>
 
+<div align="center">
+
+**<picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/rocket-dark.svg"><img src=".github/icons/rocket.svg" height="16" alt=""></picture> [Quick Start](#-quick-start)&emsp;<picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/leaf-dark.svg"><img src=".github/icons/leaf.svg" height="16" alt=""></picture> [Spring Boot](#-spring-boot-banner)&emsp;<picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/typography-dark.svg"><img src=".github/icons/typography.svg" height="16" alt=""></picture> [Font Gallery](https://spannm.github.io/figlet/)&emsp;<picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/book-dark.svg"><img src=".github/icons/book.svg" height="16" alt=""></picture> [Javadoc](https://javadoc.io/doc/io.github.spannm/figlet4j)**
+
+</div>
+
 **figlet** is a pure-Java library and Maven plugin for rendering text as ASCII art, powered by classic FIGfont (`.flf`) and TOIlet (`.tlf`) fonts. No native `figlet` binary, no external tools, it works anywhere a JVM runs.
 
 ```
@@ -23,7 +29,7 @@
   ░▀░░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░░▀░
 ```
 
-## Key Features
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/list-check-dark.svg"><img src=".github/icons/list-check.svg" height="20" alt=""></picture> Key Features
 
 * **Pure Java, no third-party runtime dependencies** - `figlet4j` only pulls in its own bundled font resources; runs anywhere a JVM does.
 
@@ -37,7 +43,7 @@
 
 * **High test coverage** - JUnit 5 + AssertJ across the parser, renderer, font loader and every Mojo.
 
-## Modules
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/puzzle-dark.svg"><img src=".github/icons/puzzle.svg" height="20" alt=""></picture> Modules
 
 | Module                   | Description                                                                                                                                      |
 |--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -46,13 +52,13 @@
 | `figlet-fonts-xero`      | 400 FIGfonts and TOIlet fonts from the [xero/figlet-fonts](https://github.com/xero/figlet-fonts) repository, a superset of the figlet.org fonts |
 | `figlet-maven-plugin`    | Maven plugin - print ASCII art banners during your build                                                                                         |
 
-## Tech Stack & Requirements
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/stack-2-dark.svg"><img src=".github/icons/stack-2.svg" height="20" alt=""></picture> Tech Stack & Requirements
 
 * **To use `figlet-maven-plugin`**: Maven 3.6.0+ running on Java 11 or higher.
 * **To use `figlet4j`** as a standalone library: Java 11 or higher.
 * **To build this project from source**: JDK 21+ and Maven 3.9.0+ (enforced by the build itself; the *compiled* artifacts still target Java 11).
 
-## Installation
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/package-dark.svg"><img src=".github/icons/package.svg" height="20" alt=""></picture> Installation
 
 ### As a Maven plugin
 
@@ -127,7 +133,7 @@ implementation("io.github.spannm:figlet4j:1.2.0")
 </dependency>
 ```
 
-## Quick Start
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/rocket-dark.svg"><img src=".github/icons/rocket.svg" height="20" alt=""></picture> Quick Start
 
 ```java
 FigletFont font = FigletFontRegistry.loadFont("standard");
@@ -167,9 +173,9 @@ String mixed = new FigletMarkupRenderer(FigletFontRegistry::loadFont)
     .render("<figletFont name=\"small\">v1.2.0</figletFont><lineBreak/>built today");
 ```
 
-The [markup DSL](#markup-dsl) is described below.
+The [markup DSL](#-markup-dsl) is described below.
 
-## Goals
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/target-dark.svg"><img src=".github/icons/target.svg" height="20" alt=""></picture> Goals
 
 | Goal                | Default phase | Description                                  |
 |---------------------|---------------|----------------------------------------------|
@@ -186,7 +192,7 @@ The [markup DSL](#markup-dsl) is described below.
 
 | Parameter           | Property                   | Default                                   | Description                                                                                                                         |
 |---------------------|----------------------------|-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `content`           | `figlet.content`           | _(project name as banner, version below)_ | Content to render; supports `${...}` property placeholders and the [markup DSL](#markup-dsl) to mix multiple fonts with plain text |
+| `content`           | `figlet.content`           | _(project name as banner, version below)_ | Content to render; supports `${...}` property placeholders and the [markup DSL](#-markup-dsl) to mix multiple fonts with plain text |
 | `font`              | `figlet.font`              | `standard`                                | Name of a built-in font (see `figlet:list-fonts`)                                                                                   |
 | `fontFile`          | `figlet.fontFile`          | _(none)_                                  | Path to an external `.flf` or `.tlf` file; takes precedence over `font` when both are set                                          |
 | `width`             | `figlet.width`             | `72`                                      | Max output width; long lines wrap at word boundaries                                                                                |
@@ -207,7 +213,7 @@ The [markup DSL](#markup-dsl) is described below.
 | `width`       | `figlet.width`      | `72`       | Max width of the samples; long lines wrap at word boundaries                                |
 | `skip`        | `figlet.skip`       | `false`    | Skip this goal entirely                                                                     |
 
-## Markup DSL
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/code-dark.svg"><img src=".github/icons/code.svg" height="20" alt=""></picture> Markup DSL
 
 `content` may mix ASCII-art banners in different fonts with literal, unrendered text:
 
@@ -225,7 +231,7 @@ The [markup DSL](#markup-dsl) is described below.
 - Everything else is literal text, printed as-is.
 - If `content` contains no `<figletFont>` tag at all, the whole (resolved) content is rendered as a single banner using `font`/`fontFile`, exactly as if it had been wrapped in one `<figletFont>` tag referencing that font.
 
-## Spring Boot banner
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/leaf-dark.svg"><img src=".github/icons/leaf.svg" height="20" alt=""></picture> Spring Boot banner
 
 Spring Boot prints the content of a `banner.txt` on the classpath at startup. Since version 1.2.0 the plugin can generate that file at build time, so the application needs no runtime dependency on figlet:
 
@@ -263,7 +269,7 @@ app.setBanner((environment, sourceClass, out) ->
 app.run(args);
 ```
 
-## Fonts
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/typography-dark.svg"><img src=".github/icons/typography.svg" height="20" alt=""></picture> Fonts
 
 All fonts can be browsed online in the [font gallery](https://spannm.github.io/figlet/), with a sample, the character set and usage snippets for each font.
 
@@ -279,7 +285,7 @@ In a project that declares the plugin in its POM, the short form `mvn figlet:lis
 
 > Font files retain their original licenses, see the `LICENSE.txt` in each `figlet-fonts-*` module for details.
 
-## Building from source
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/hammer-dark.svg"><img src=".github/icons/hammer.svg" height="20" alt=""></picture> Building from source
 
 ```bash
 git clone --recurse-submodules https://github.com/spannm/figlet.git
@@ -289,7 +295,7 @@ mvn
 
 > **Note:** The project uses a Git submodule (`figlet-fonts-xero`) for its extended font collection. Make sure to clone with `--recurse-submodules`, or run `git submodule update --init --recursive` after cloning.
 
-## Contributions welcome!
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/git-pull-request-dark.svg"><img src=".github/icons/git-pull-request.svg" height="20" alt=""></picture> Contributions welcome!
 
 Got a bug to fix or a feature to add?
 
@@ -301,13 +307,13 @@ Got a bug to fix or a feature to add?
 
 <div align="center"> ─────────────── </div>
 
-### License
+### <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/scale-dark.svg"><img src=".github/icons/scale.svg" height="20" alt=""></picture> License
 
 figlet is licensed under the **Apache License, Version 2.0**.
 
 Font files retain their original licenses. See the respective `LICENSE.txt` or notice files within the font resource modules for detailed third-party licensing information.
 
-## Credits
+## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/heart-dark.svg"><img src=".github/icons/heart.svg" height="20" alt=""></picture> Credits
 
 * **FIGlet** - Glenn Chappell, Ian Chai, Frank Sheeran (1991) - https://www.figlet.org
 * **FIGfont spec** - John Cowan, Paul Burton (1996/1997) - https://www.jave.de/figlet/figfont.html
@@ -321,7 +327,7 @@ Font files retain their original licenses. See the respective `LICENSE.txt` or n
 <table style="border-collapse: collapse;">
   <tr>
     <td style="padding: 40px; border: 2px solid #3a82c2;">
-      <strong>Enjoying figlet? Please leave a 🌟 to support the project!</strong><br>
+      <strong>Enjoying figlet? Please leave a star to support the project!</strong><br>
       <small>Your stars help others discover the project and keep it maintained.</small>
     </td>
   </tr>
