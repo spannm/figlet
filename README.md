@@ -12,8 +12,10 @@
   <a href="https://sonarcloud.io/component_measures?id=io.github.spannm%3Afiglet&metric=coverage"><img src="https://img.shields.io/sonar/coverage/io.github.spannm:figlet?server=https%3A%2F%2Fsonarcloud.io&style=flat-square" alt="SonarCloud Coverage"></a>
 </div>
 
-<h1 align="center">figlet</h1>
-<h3 align="center">ASCII art banners for your Maven build</h3>
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset=".github/images/welcome-dark.svg"><img src=".github/images/welcome.svg" alt="WELCOME TO FIGLET"></picture>
+</p>
+<h3 align="center">ASCII art banners for Maven and Spring</h3>
 
 <div align="center">
 
@@ -22,12 +24,6 @@
 </div>
 
 **figlet** is a pure-Java library and Maven plugin for rendering text as ASCII art, powered by classic FIGfont (`.flf`) and TOIlet (`.tlf`) fonts. No native `figlet` binary, no external tools, it works anywhere a JVM runs.
-
-```
-  ░█▀▀░▀█▀░█▀▀░█░░░█▀▀░▀█▀
-  ░█▀▀░░█░░█░█░█░░░█▀▀░░█░
-  ░▀░░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░░▀░
-```
 
 ## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/list-check-dark.svg"><img src=".github/icons/list-check.svg" height="20" alt=""></picture> Key Features
 
@@ -60,7 +56,7 @@
 
 ## <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/package-dark.svg"><img src=".github/icons/package.svg" height="20" alt=""></picture> Installation
 
-### As a Maven plugin
+### <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/chevron-right-dark.svg"><img src=".github/icons/chevron-right.svg" height="14" alt=""></picture> As a Maven plugin
 
 Add to your `pom.xml`:
 
@@ -97,9 +93,9 @@ Without further configuration, the project name is rendered in the `standard` fo
 [INFO]
 ```
 
-Use `<content>` and `<font>` in a `<configuration>` block to change what is rendered and how, see [`render` configuration](#render-configuration). All fonts of both font modules are available to the plugin.
+Use `<content>` and `<font>` in a `<configuration>` block to change what is rendered and how, see [`render` configuration](#-render-configuration). All fonts of both font modules are available to the plugin.
 
-### As a Java library (`figlet4j`)
+### <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/chevron-right-dark.svg"><img src=".github/icons/chevron-right.svg" height="14" alt=""></picture> As a Java library (`figlet4j`)
 
 **Maven (`pom.xml`)**
 
@@ -188,7 +184,7 @@ The [markup DSL](#-markup-dsl) is described below.
 > for every other module, so the same banner is not printed once per module. Set
 > `executionRootOnly` to `false` in a module that should render its own banner.
 
-### `render` configuration
+### <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/chevron-right-dark.svg"><img src=".github/icons/chevron-right.svg" height="14" alt=""></picture> `render` configuration
 
 | Parameter           | Property                   | Default                                   | Description                                                                                                                         |
 |---------------------|----------------------------|-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
@@ -202,7 +198,7 @@ The [markup DSL](#-markup-dsl) is described below.
 | `executionRootOnly` | `figlet.executionRootOnly` | `true`                                    | Only render for the execution-root project of a multi-module build                                                                  |
 | `skip`              | `figlet.skip`              | `false`                                   | Skip this goal entirely                                                                                                             |
 
-### `list-fonts` configuration
+### <picture><source media="(prefers-color-scheme: dark)" srcset=".github/icons/chevron-right-dark.svg"><img src=".github/icons/chevron-right.svg" height="14" alt=""></picture> `list-fonts` configuration
 
 | Parameter     | Property            | Default    | Description                                                                                 |
 |---------------|---------------------|------------|---------------------------------------------------------------------------------------------|
@@ -326,7 +322,8 @@ Font files retain their original licenses. See the respective `LICENSE.txt` or n
 <div align="center">
 <table style="border-collapse: collapse;">
   <tr>
-    <td style="padding: 40px; border: 2px solid #3a82c2;">
+    <td align="center" style="padding: 40px; border: 2px solid #3a82c2;">
+      <picture><img src=".github/icons/star.svg" height="20" alt=""></picture> <picture><img src=".github/icons/star.svg" height="28" alt=""></picture> <picture><img src=".github/icons/star.svg" height="20" alt=""></picture><br><br>
       <strong>Enjoying figlet? Please leave a star to support the project!</strong><br>
       <small>Your stars help others discover the project and keep it maintained.</small>
     </td>
